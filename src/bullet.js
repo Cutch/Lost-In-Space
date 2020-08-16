@@ -14,7 +14,8 @@ class Bullet extends Sprite.class {
       .filter(e => pointInRect(this, e))
       .forEach(hitEnemy => {
         this.hit = true;
-        this.context.canvas.dispatchEvent(new CustomEvent('enemyHit', { detail: hitEnemy }));
+        hitEnemy.health--;
+        if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
   }
 }

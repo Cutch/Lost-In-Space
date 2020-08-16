@@ -63,12 +63,30 @@ initGame();
  */
 const mainGameLoop = () => {
   // Check if an enemy should spawn
-  if (tick % Math.min((10 - ship.day) * 60, 60) === 0) {
-    let xSpawn = Math.random() - 0.5;
-    xSpawn = Math.sign(xSpawn) + xSpawn;
-    let ySpawn = Math.random() - 0.5;
-    ySpawn = Math.sign(ySpawn) + ySpawn;
-    enemies.push(new Enemy({ x: xSpawn * canvas.width, y: ySpawn * canvas.height, ship }));
+  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
+    /**
+     * Generate a spawn location outside of the canvas
+     * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
+     * X,Y are randomly flipped
+     */
+    const spawn = [Math.random() * 1.5, Math.random() - 0.5];
+    spawn[1] = Math.sign(spawn[1]) + spawn[1];
+    if (Math.random() > 0.5) spawn.reverse();
+    /**
+     * Determine the possibility for the health
+     * After day 3, chance goes up above health 1.
+     * Day 23 has the max chance of seeing health 3
+     */
+
+    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
+    enemies.push(
+      new Enemy({
+        x: spawn[0] * canvas.width,
+        y: spawn[1] * canvas.height,
+        ship,
+        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
+      })
+    );
   }
   tick++;
   ship.update(enemies, tick);
@@ -84,7 +102,10 @@ const mainGameLoop = () => {
   });
   // Win Condition
   if (ship.scrap === 200) {
-    setTimeout(() => (gameOver = new GameOver(ship, true)), 3000);
+    setTimeout(() => {
+      enemies = [];
+      gameOver = new GameOver(ship, true);
+    }, 3000);
   }
 };
 /**
@@ -135,7 +156,7 @@ const loop = GameLoop({
   }
 });
 // Listen for enemy hits
-canvas.addEventListener('enemyHit', ({ detail }) => {
+canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship

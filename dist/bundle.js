@@ -110,6 +110,44 @@ function rotatePoint(point, angle) {
 }
 
 /**
+ * Create a seeded random number generator.
+ *
+ * ```js
+ * import { seedRand } from 'kontra';
+ *
+ * let rand = seedRand('kontra');
+ * console.log(rand());  // => always 0.33761959057301283
+ * ```
+ * @see https://stackoverflow.com/a/47593316/2124254
+ * @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md
+ *
+ * @function seedRand
+ *
+ * @param {String} str - String to seed the random number generator.
+ *
+ * @returns {() => Number} Seeded random number generator function.
+ */
+ function seedRand(str) {
+  // based on the above references, this was the smallest code yet decent
+  // quality seed random function
+
+  // first create a suitable hash of the seed string using xfnv1a
+  // @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#addendum-a-seed-generating-functions
+  for(var i = 0, h = 2166136261 >>> 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
+  h += h << 13; h ^= h >>> 7;
+  h += h << 3;  h ^= h >>> 17;
+  let seed = (h += h << 5) >>> 0;
+
+  // then return the seed function and discard the first result
+  // @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#lcg-lehmer-rng
+  let rand = () => (2 ** 31 - 1 & (seed = Math.imul(48271, seed))) / 2 ** 31;
+  rand();
+  return rand;
+}
+
+/**
  * Clamp a number between two values, preventing it from going below or above the minimum and maximum values.
  * @function clamp
  *
@@ -1330,13 +1368,14 @@ class StarField extends factory$2.class {
   }
 
   draw() {
-    this.context.fillStyle = '#000';
-    this.context.fillRect(-this.x, -this.y, this.context.canvas.width, this.context.canvas.height);
-    this.context.fillStyle = '#fff';
-    for (let i = 0; i < this.context.canvas.width * this.context.canvas.height * 0.0001; i++) {
-      this.context.fillRect(
-        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % this.context.canvas.width),
-        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % this.context.canvas.height),
+    const ctx = this.context;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < ctx.canvas.width * ctx.canvas.height * 0.0001; i++) {
+      ctx.fillRect(
+        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
+        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
       );
@@ -1368,24 +1407,26 @@ class Cockpit extends factory$2.class {
   showSkipHelper = false;
   constructor(props) {
     super(props);
-    this.dayText = new factory$4(fontProps);
-    this.scrapText = new factory$4(fontProps);
-    this.healthText = new factory$4(fontProps);
-    this.skipHelper = new factory$4({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
-    this.statusTextBackground = new factory$3({ color: '#6009' });
+    const _this = this;
+    _this.dayText = new factory$4(fontProps);
+    _this.scrapText = new factory$4(fontProps);
+    _this.healthText = new factory$4(fontProps);
+    _this.skipHelper = new factory$4({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
+    _this.statusTextBackground = new factory$3({ color: '#6009' });
   }
   setSkipHelper(on) {
     this.showSkipHelper = on;
   }
 
   render() {
-    this.dayText.render();
-    this.scrapText.render();
-    this.healthText.render();
-    if (this.statusText) {
-      this.statusTextBackground.render();
-      this.statusText.render();
-      if (this.showSkipHelper) this.skipHelper.render();
+    const _this = this;
+    _this.dayText.render();
+    _this.scrapText.render();
+    _this.healthText.render();
+    if (_this.statusText) {
+      _this.statusTextBackground.render();
+      _this.statusText.render();
+      if (_this.showSkipHelper) _this.skipHelper.render();
     }
   }
   addStatus(text, time = 6000) {
@@ -1408,25 +1449,26 @@ class Cockpit extends factory$2.class {
     } else this.statusText = null;
   }
   update(ship) {
-    const w = this.context.canvas.width;
-    const h = this.context.canvas.height;
-    this.dayText.x = w - pad;
-    this.dayText.y = h - pad - fontSize;
-    this.scrapText.x = w - pad;
-    this.scrapText.y = h - 45 - pad - fontSize;
-    this.healthText.x = w - pad;
-    this.healthText.y = h - 90 - pad - fontSize;
-    this.scrapText.text = `Scrap: ${ship.scrap}t`;
-    this.dayText.text = `Day: ${ship.day}`;
-    this.healthText.text = `Hull Integrity: ${ship.health}%`;
-    if (this.statusText) {
-      this.statusTextBackground.width = w;
-      this.statusTextBackground.height = fontSize + pad * 2;
-      this.statusText.x = w / 2;
-      this.statusText.y = pad;
-      if (this.showSkipHelper) {
-        this.skipHelper.x = w / 2 + 150;
-        this.skipHelper.y = pad * 2 + 7;
+    const _this = this;
+    const w = _this.context.canvas.width;
+    const h = _this.context.canvas.height;
+    _this.dayText.x = w - pad;
+    _this.dayText.y = h - pad - fontSize;
+    _this.scrapText.x = w - pad;
+    _this.scrapText.y = h - 45 - pad - fontSize;
+    _this.healthText.x = w - pad;
+    _this.healthText.y = h - 90 - pad - fontSize;
+    _this.scrapText.text = `Scrap: ${ship.scrap}t`;
+    _this.dayText.text = `Day: ${ship.day}`;
+    _this.healthText.text = `Hull Integrity: ${ship.health}%`;
+    if (_this.statusText) {
+      _this.statusTextBackground.width = w;
+      _this.statusTextBackground.height = fontSize + pad * 2;
+      _this.statusText.x = w / 2;
+      _this.statusText.y = pad;
+      if (_this.showSkipHelper) {
+        _this.skipHelper.x = w / 2 + 150;
+        _this.skipHelper.y = pad * 2 + 7;
       }
     }
   }
@@ -1441,8 +1483,8 @@ const angleToTarget = (source, target) => Math.atan2(target.y - source.y, target
 const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
-  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...',
-  secondaryWeapon: 'Secondary Weapon Online'
+  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
+  // secondaryWeapon: 'Secondary Weapon Online'
 };
 
 class Bullet extends factory$3.class {
@@ -1459,64 +1501,73 @@ class Bullet extends factory$3.class {
       .filter(e => pointInRect(this, e))
       .forEach(hitEnemy => {
         this.hit = true;
-        this.context.canvas.dispatchEvent(new CustomEvent('enemyHit', { detail: hitEnemy }));
+        hitEnemy.health--;
+        if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
   }
 }
 
 const AudioContext = window.AudioContext || window.webkitAudioContext;
-const ctx = new AudioContext();
-const fireSound = () => {
-  const o = ctx.createOscillator();
-  o.type = 'square';
-  const g = ctx.createGain();
-  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
-  o.frequency.value = 100;
-  o.connect(g);
-  g.connect(ctx.destination);
-  o.start();
-  setTimeout(() => o.stop(), 100);
-};
-let engineSounds;
-let gainMaster;
-let timer;
-const engineSoundOn = level => {
-  clearTimeout(timer);
-  if (!engineSounds) {
-    const filter = ctx.createBiquadFilter();
-    filter.type = 0;
-    filter.Q.value = 20;
-    engineSounds = [ctx.createOscillator(), ctx.createOscillator()];
-    const [a, b] = engineSounds;
-    a.frequency.value = 10 * level;
-    b.frequency.value = 25;
+let fireSound = () => {};
+let engineSoundOn = () => {};
+let engineSoundOff = () => {};
+if (AudioContext) {
+  const ctx = new AudioContext();
+  fireSound = () => {
+    const o = ctx.createOscillator();
+    o.type = 'square';
+    const g = ctx.createGain();
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+    o.frequency.value = 100;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => o.stop(), 100);
+  };
+  let engineSounds;
+  let gain;
+  let timer;
+  engineSoundOn = level => {
+    clearTimeout(timer);
+    if (!engineSounds) {
+      const filter = ctx.createBiquadFilter();
+      filter.type = 0;
+      filter.Q.value = 20;
+      engineSounds = [ctx.createOscillator(), ctx.createOscillator()];
+      const [a, b] = engineSounds;
+      a.frequency.value = 10 * level;
+      b.frequency.value = 25;
 
-    engineSounds.forEach((x, i) => {
-      x.type = 'triangle';
-      x.connect(filter);
-      x.start(0);
-    });
-    gainMaster = ctx.createGain();
-    gainMaster.gain.value = 0.05;
-    filter.connect(gainMaster);
-    gainMaster.connect(ctx.destination);
-  } else {
-    gainMaster.gain.cancelScheduledValues(ctx.currentTime);
-    gainMaster.gain.setValueAtTime(0.05, ctx.currentTime);
-  }
-};
-const engineSoundOff = () => {
-  gainMaster.gain.setValueAtTime(gainMaster.gain.value, ctx.currentTime);
-  gainMaster.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.02);
-  timer = setTimeout(() => {
-    if (engineSounds) engineSounds.forEach(x => x.stop());
-    engineSounds = null;
-  }, 20);
-};
+      engineSounds.forEach((x, i) => {
+        x.type = 'triangle';
+        x.connect(filter);
+        x.start(0);
+      });
+      const gainMaster = ctx.createGain();
+      gain = gainMaster.gain;
+      gain.value = 0.05;
+      filter.connect(gainMaster);
+      gainMaster.connect(ctx.destination);
+    } else {
+      gain.cancelScheduledValues(ctx.currentTime);
+      gain.setValueAtTime(0.05, ctx.currentTime);
+    }
+  };
+  engineSoundOff = () => {
+    if (gain) {
+      gain.setValueAtTime(gain.value, ctx.currentTime);
+      gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.02);
+    }
+    timer = setTimeout(() => {
+      if (engineSounds) engineSounds.forEach(x => x.stop());
+      engineSounds = null;
+    }, 20);
+  };
 
-document.addEventListener('keydown', () => {
-  ctx.resume();
-});
+  window.addEventListener('keydown', () => {
+    ctx.resume();
+  });
+}
 
 class Ship extends factory$2.class {
   maxShipSpeed = 4;
@@ -1529,15 +1580,7 @@ class Ship extends factory$2.class {
   engineLevel = 1; // Ship's level
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
-  upgrades = [
-    [20, () => (this.fireRate = 15), text.fireRateUpdated],
-    [40, () => ((this.maxShipSpeed = 5), this.engineLevel++), text.maxSpeed],
-    [60, () => (this.fireRate = 10), text.fireRateUpdated],
-    [80, () => ((this.maxShipSpeed = 6), this.engineLevel++), text.maxSpeed],
-    [100, () => (this.fireRate = 5), text.fireRateUpdated],
-    [120, () => ((this.maxShipSpeed = 7), this.engineLevel++), text.maxSpeed],
-    [200, () => (this.hasWarp = true), text.warpDrive]
-  ];
+
   constructor(cockpit) {
     super({
       width: 60,
@@ -1548,49 +1591,59 @@ class Ship extends factory$2.class {
       speedY: 0,
       health: 100
     });
-    const ctx = this.context;
-    this.cockpit = cockpit;
+    const _this = this;
+    const ctx = _this.context;
+    _this.cockpit = cockpit;
     // Engine fire gradient
-    this.fireGrad = ctx.createLinearGradient(0, this.mh, 0, this.mh + 20);
-    this.fireGrad.addColorStop(0, '#f00');
-    this.fireGrad.addColorStop(0.5, '#600');
+    _this.fireGrad = ctx.createLinearGradient(0, _this.mh, 0, _this.mh + 20);
+    _this.fireGrad.addColorStop(0, '#f00');
+    _this.fireGrad.addColorStop(0.5, '#600');
     // Ship texture
-    this.shipGrad = ctx.createLinearGradient(-40, 0, 40, 0);
-    this.shipGrad.addColorStop(0.0, '#000');
-    this.shipGrad.addColorStop(0.5, '#fff');
-    this.shipGrad.addColorStop(1, '#000');
+    _this.shipGrad = ctx.createLinearGradient(-40, 0, 40, 0);
+    _this.shipGrad.addColorStop(0.0, '#000');
+    _this.shipGrad.addColorStop(0.5, '#fff');
+    _this.shipGrad.addColorStop(1, '#000');
 
     // x,y point path of ship
-    this.shipPath = [
+    _this.shipPath = [
       0,
-      -this.mh,
-      -this.mw / 4,
-      -this.mh / 2,
-      -this.mw / 3,
+      -_this.mh,
+      -_this.mw / 4,
+      -_this.mh / 2,
+      -_this.mw / 3,
       0,
-      -this.mw,
-      this.mh / 2,
-      -this.mw,
-      this.mh * 0.9,
-      -this.mw / 2,
-      this.mh,
-      this.mw / 2,
-      this.mh,
-      this.mw,
-      this.mh * 0.9,
-      this.mw,
-      this.mh / 2,
-      this.mw / 3,
+      -_this.mw,
+      _this.mh / 2,
+      -_this.mw,
+      _this.mh * 0.9,
+      -_this.mw / 2,
+      _this.mh,
+      _this.mw / 2,
+      _this.mh,
+      _this.mw,
+      _this.mh * 0.9,
+      _this.mw,
+      _this.mh / 2,
+      _this.mw / 3,
       0,
-      this.mw / 4,
-      -this.mh / 2
+      _this.mw / 4,
+      -_this.mh / 2
+    ];
+    _this.upgrades = [
+      [20, () => (_this.fireRate = 15), text.fireRateUpdated],
+      [40, () => ((_this.maxShipSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
+      [60, () => (_this.fireRate = 10), text.fireRateUpdated],
+      [80, () => ((_this.maxShipSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
+      [100, () => (_this.fireRate = 5), text.fireRateUpdated],
+      [120, () => ((_this.maxShipSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [200, () => (_this.hasWarp = true), text.warpDrive]
     ];
     // Listen for enemies hit, by ship or bullets
-    ctx.canvas.addEventListener('enemyHit', () => {
-      this.scrap++;
-      this.upgrades.forEach(([scrap, func, text]) => {
-        if (scrap === this.scrap) {
-          this.level++;
+    ctx.canvas.addEventListener('eh', () => {
+      _this.scrap++;
+      _this.upgrades.forEach(([scrap, func, text]) => {
+        if (scrap === _this.scrap) {
+          _this.level++;
           func();
           cockpit.addStatus(text);
         }
@@ -1598,22 +1651,23 @@ class Ship extends factory$2.class {
     });
   }
   draw() {
+    const _this = this;
     // Generate Ship
-    const ctx = this.context;
-    ctx.fillStyle = this.shipGrad;
+    const ctx = _this.context;
+    ctx.fillStyle = _this.shipGrad;
     ctx.beginPath();
-    for (let i = 0; i < this.shipPath.length; i += 2) ctx.lineTo(this.shipPath[i], this.shipPath[i + 1]);
+    for (let i = 0; i < _this.shipPath.length; i += 2) ctx.lineTo(_this.shipPath[i], _this.shipPath[i + 1]);
     ctx.fill();
-    if (this.showExhaust) {
+    if (_this.showExhaust) {
       // Generate Exhaust
-      ctx.fillStyle = this.fireGrad;
+      ctx.fillStyle = _this.fireGrad;
       ctx.beginPath();
       const r = Math.random();
+      const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
       for (let i = 0; i <= 12; i++) {
-        this.maxShipSpeed * 2;
         ctx.lineTo(
-          -this.mw / 2 + (this.width / 2 / 12) * i,
-          this.mh + (i % 2) * (this.maxShipSpeed * 4 - r * this.maxShipSpeed * 2 * Math.sqrt(Math.abs(i / 2 - 3)))
+          -_this.mw / 2 + (_this.width / 2 / 12) * i,
+          _this.mh + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3)))
         );
       }
       ctx.fill();
@@ -1624,58 +1678,60 @@ class Ship extends factory$2.class {
     this.bullets.forEach(b => b.render());
   }
   update(enemies, tick) {
+    const _this = this;
     // Update Bullets
-    this.bullets.forEach((b, i) => {
+    _this.bullets.forEach((b, i) => {
       // Check if bullets have gone too far or hit an enemy, remove if so
-      if (b.tick < tick - 60 || b.hit) this.bullets.splice(i, 1);
+      if (b.tick < tick - 60 || b.hit) _this.bullets.splice(i, 1);
       else b.update(enemies);
     });
-    // Check if it is a new day, day is 20 seconds
-    this.day = Math.floor(tick / 1200);
+    // Check if it is a new day, day is 10 seconds
+    _this.day = Math.floor(tick / 600);
     // Check if ship crashed into an enemy
     enemies
-      .filter(e => distanceToTarget({ x: this.x, y: this.y }, e) < 55)
+      .filter(e => distanceToTarget({ x: _this.x, y: _this.y }, e) < 55)
       .forEach(hitEnemy => {
-        this.health -= 10;
-        this.context.canvas.dispatchEvent(new CustomEvent('enemyHit', { detail: hitEnemy }));
+        _this.health -= 10;
+        _this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
     // Show exhaust when forward is clicked, see index for movement
-    const prevShowExhaust = this.showExhaust;
-    this.showExhaust = keyPressed('w');
-    if (this.showExhaust && !prevShowExhaust) engineSoundOn(this.engineLevel);
-    else if (!this.showExhaust && prevShowExhaust) engineSoundOff();
-    if (keyPressed('space') && tick - this.lastFire >= this.fireRate) {
+    const prevShowExhaust = _this.showExhaust;
+    _this.showExhaust = keyPressed('w');
+    if (_this.showExhaust && !prevShowExhaust) engineSoundOn(_this.engineLevel);
+    else if (!_this.showExhaust && prevShowExhaust) engineSoundOff();
+    if (keyPressed('space') && tick - _this.lastFire >= _this.fireRate) {
       fireSound();
-      this.lastFire = tick;
-      this.fire(tick);
+      _this.lastFire = tick;
+      _this.fire(tick);
     }
     // Update the ship's speed on key press
     if (keyPressed('w')) {
-      this.speedX += -Math.sin(this.rotation) * 0.05;
-      this.speedY += Math.cos(this.rotation) * 0.05;
-      const speed = distance(this.speedX, this.speedY);
+      _this.speedX += -Math.sin(_this.rotation) * 0.05;
+      _this.speedY += Math.cos(_this.rotation) * 0.05;
+      const speed = distance(_this.speedX, _this.speedY);
       // Ensure ship does not go over current max speed
-      if (speed > this.maxShipSpeed) {
-        this.speedX *= this.maxShipSpeed / speed;
-        this.speedY *= this.maxShipSpeed / speed;
+      if (speed > _this.maxShipSpeed) {
+        _this.speedX *= _this.maxShipSpeed / speed;
+        _this.speedY *= _this.maxShipSpeed / speed;
       }
     }
     // Rotate on key press
     if (keyPressed('a')) {
-      this.rotation = this.rotation - 0.05;
+      _this.rotation = _this.rotation - 0.05;
     }
     if (keyPressed('d')) {
-      this.rotation = this.rotation + 0.05;
+      _this.rotation = _this.rotation + 0.05;
     }
   }
   fire(tick) {
-    this.bullets.push(
+    const _this = this;
+    _this.bullets.push(
       new Bullet({
-        dx: Math.sin(this.rotation) * 10,
-        dy: -Math.cos(this.rotation) * 10,
-        x: this.x + Math.sin(this.rotation) * 40,
-        y: this.y - Math.cos(this.rotation) * 40,
-        rotation: this.rotation,
+        dx: Math.sin(_this.rotation) * 10,
+        dy: -Math.cos(_this.rotation) * 10,
+        x: _this.x + Math.sin(_this.rotation) * 40,
+        y: _this.y - Math.cos(_this.rotation) * 40,
+        rotation: _this.rotation,
         tick
       })
     );
@@ -1683,21 +1739,49 @@ class Ship extends factory$2.class {
 }
 
 const accSpeed = 0.1;
+const getPattern = color => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+
+  // Give the pattern a width and height of 50
+  patternCanvas.width = 40;
+  patternCanvas.height = 40;
+
+  // Give the pattern a background color
+  patternContext.fillStyle = color;
+  patternContext.fillRect(0, 0, 40, 40);
+
+  const rand = seedRand(1);
+  for (let x = 0, y = 0; x < 40 || y < 40; ) {
+    const w = Math.floor(rand() * 7 + 2);
+    patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
+    patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
+    x += 1 + w;
+    if (x > 40) {
+      y += 5;
+      x = 0;
+    }
+  }
+  return patternCanvas;
+};
+const colors = ['#080', '#008', '#800'].map(getPattern);
 class Enemy extends factory$3.class {
   constructor(properties) {
-    properties = { ...properties, width: 40, height: 40, color: 'green', speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
+    properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
   }
   update(enemies) {
+    const _this = this;
+    this.color = this.context.createPattern(colors[this.health - 1], null);
     /**
      * Find the closest other enemy
      */
     const avoidEnemies = enemies.reduce(
       (a, e) => {
-        if (e !== this) {
-          const dist = distanceToTarget(this, e);
+        if (e !== _this) {
+          const dist = distanceToTarget(_this, e);
           if (dist < a.dist) {
-            const angle = angleToTarget(this, e) + 180;
+            const angle = angleToTarget(_this, e) + 180;
             return {
               angle,
               dist
@@ -1711,23 +1795,23 @@ class Enemy extends factory$3.class {
     /**
      * Find the path to the players ship
      */
-    let angle = angleToTarget(this, this.ship);
+    let angle = angleToTarget(_this, _this.ship);
     if (avoidEnemies.dist !== 100) angle = avoidEnemies.angle + angle / 2;
-    this.speedX -= Math.sin(angle) * accSpeed;
-    this.speedY += Math.cos(angle) * accSpeed;
-    const speed = distance(this.speedX, this.speedY);
+    _this.speedX -= Math.sin(angle) * accSpeed;
+    _this.speedY += Math.cos(angle) * accSpeed;
+    const speed = distance(_this.speedX, _this.speedY);
     /**
-     * Max Speed starts at 5, works up to 15 over 20 days
+     * Max Speed starts at 5, works up to 10 over 40 days
      */
-    const day = this.ship.day;
-    const maxSpeed = Math.min(day / 2, 10) + 5;
+    const day = _this.ship.day;
+    const maxSpeed = Math.min(day / 8, 5) + 5;
     if (speed > maxSpeed) {
-      this.speedX *= maxSpeed / speed;
-      this.speedY *= maxSpeed / speed;
+      _this.speedX *= maxSpeed / speed;
+      _this.speedY *= maxSpeed / speed;
     }
 
-    this.dx -= this.speedX;
-    this.dy -= this.speedY;
+    _this.dx -= _this.speedX;
+    _this.dy -= _this.speedY;
     super.update();
   }
 }
@@ -1744,66 +1828,71 @@ class GameOver extends factory$2.class {
   constructor(ship, gameWin) {
     super();
     engineSoundOff();
-    this.background = new factory$3({ width: 600, height: 400, color: '#600A' });
-    this.winText = new factory$4({ font: smallFont, color: color$1, text: "Me: These are the coordinates, where's Earth?", textAlign: textAlign$1 });
-    this.winText2 = new factory$4({ font: smallFont, color: color$1, text: 'Computer: Error: 404. Earth not found.', textAlign: textAlign$1 });
-    this.gameOverText = new factory$4({ font: font$1, color: color$1, text: 'Game Over', textAlign: textAlign$1 });
-    this.highScoreText = new factory$4({ font: font$1, color: color$1, text: `Score: ${ship.scrap}`, textAlign: textAlign$1 });
-    if (window.localStorage) {
+    const _this = this;
+    _this.background = new factory$3({ width: 600, height: 400, color: '#600A' });
+    _this.winText = new factory$4({ font: smallFont, color: color$1, text: "Me: These are the coordinates, where's Earth?", textAlign: textAlign$1 });
+    _this.winText2 = new factory$4({ font: smallFont, color: color$1, text: 'Computer: Error: 404. Earth not found.', textAlign: textAlign$1 });
+    _this.gameOverText = new factory$4({ font: font$1, color: color$1, text: 'Game Over', textAlign: textAlign$1 });
+    _this.highScoreText = new factory$4({ font: font$1, color: color$1, text: `Score: ${ship.scrap}`, textAlign: textAlign$1 });
+    const localStorage = window.localStorage;
+    if (localStorage) {
       const maxScore = Math.max(localStorage.getItem('lins_score') || 0, ship.scrap);
-      const maxDay = Math.max(localStorage.getItem('lins_day') || 0, ship.day);
+      const maxDay = localStorage.getItem('lins_day') || 0;
+      const maxDayO = ship.scrap >= 200 ? Math.min(maxDay, ship.day) : maxDay;
       localStorage.setItem('lins_score', maxScore);
       localStorage.setItem('lins_day', maxDay);
-      this.maxScoreText = new factory$4({
+      _this.maxScoreText = new factory$4({
         font: `18px Arial`,
         color: color$1,
-        text: `High Score: ${maxDay} day${addS(maxDay)}, ${maxScore} scrap`,
+        text: `High Score: ${maxDayO} day${addS(maxDayO)}, ${maxScore} scrap`,
         textAlign: textAlign$1
       });
     }
-    this.dayText = new factory$4({
+    _this.dayText = new factory$4({
       font: font$1,
       color: color$1,
       text: `${gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
       textAlign: textAlign$1
     });
-    this.playAgainText = new factory$4({ font: font$1, color: color$1, text: 'Play Again? Press Enter', textAlign: textAlign$1 });
-    this.gameWin = gameWin;
+    _this.playAgainText = new factory$4({ font: font$1, color: color$1, text: 'Play Again? Press Enter', textAlign: textAlign$1 });
+    _this.gameWin = gameWin;
   }
 
   render() {
-    this.background.render();
-    if (this.gameWin) {
-      this.winText.render();
-      this.winText2.render();
-    } else this.gameOverText.render();
+    const _this = this;
+    _this.background.render();
+    if (_this.gameWin) {
+      _this.winText.render();
+      _this.winText2.render();
+    } else _this.gameOverText.render();
 
-    this.highScoreText.render();
-    this.dayText.render();
-    if (this.maxScoreText) this.maxScoreText.render();
-    this.playAgainText.render();
+    _this.highScoreText.render();
+    _this.dayText.render();
+    if (_this.maxScoreText) _this.maxScoreText.render();
+    _this.playAgainText.render();
   }
   update() {
-    const cw = this.context.canvas.width / 2;
-    const ch = this.context.canvas.height / 2;
-    this.background.x = cw - this.background.width / 2;
-    this.background.y = ch - this.background.height / 2;
-    this.winText.x = cw;
-    this.winText.y = ch - (24 + pad$1) * 3;
-    this.winText2.x = cw;
-    this.winText2.y = ch - (32 + pad$1) * 2;
-    this.gameOverText.x = cw;
-    this.gameOverText.y = ch - (fontSize$1 + pad$1) * 2;
-    this.highScoreText.x = cw;
-    this.highScoreText.y = ch - (fontSize$1 + pad$1);
-    this.dayText.x = cw;
-    this.dayText.y = ch;
-    if (this.maxScoreText) {
-      this.maxScoreText.x = cw;
-      this.maxScoreText.y = ch + (fontSize$1 + pad$1);
+    const _this = this;
+    const cw = _this.context.canvas.width / 2;
+    const ch = _this.context.canvas.height / 2;
+    _this.background.x = cw - _this.background.width / 2;
+    _this.background.y = ch - _this.background.height / 2;
+    _this.winText.x = cw;
+    _this.winText.y = ch - (24 + pad$1) * 3;
+    _this.winText2.x = cw;
+    _this.winText2.y = ch - (32 + pad$1) * 2;
+    _this.gameOverText.x = cw;
+    _this.gameOverText.y = ch - (fontSize$1 + pad$1) * 2;
+    _this.highScoreText.x = cw;
+    _this.highScoreText.y = ch - (fontSize$1 + pad$1);
+    _this.dayText.x = cw;
+    _this.dayText.y = ch;
+    if (_this.maxScoreText) {
+      _this.maxScoreText.x = cw;
+      _this.maxScoreText.y = ch + (fontSize$1 + pad$1);
     }
-    this.playAgainText.x = cw;
-    this.playAgainText.y = ch + (fontSize$1 + pad$1) * 2;
+    _this.playAgainText.x = cw;
+    _this.playAgainText.y = ch + (fontSize$1 + pad$1) * 2;
   }
 }
 
@@ -1866,12 +1955,30 @@ initGame();
  */
 const mainGameLoop = () => {
   // Check if an enemy should spawn
-  if (tick % Math.min((10 - ship.day) * 60, 60) === 0) {
-    let xSpawn = Math.random() - 0.5;
-    xSpawn = Math.sign(xSpawn) + xSpawn;
-    let ySpawn = Math.random() - 0.5;
-    ySpawn = Math.sign(ySpawn) + ySpawn;
-    enemies.push(new Enemy({ x: xSpawn * canvas.width, y: ySpawn * canvas.height, ship }));
+  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
+    /**
+     * Generate a spawn location outside of the canvas
+     * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
+     * X,Y are randomly flipped
+     */
+    const spawn = [Math.random() * 1.5, Math.random() - 0.5];
+    spawn[1] = Math.sign(spawn[1]) + spawn[1];
+    if (Math.random() > 0.5) spawn.reverse();
+    /**
+     * Determine the possibility for the health
+     * After day 3, chance goes up above health 1.
+     * Day 23 has the max chance of seeing health 3
+     */
+
+    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
+    enemies.push(
+      new Enemy({
+        x: spawn[0] * canvas.width,
+        y: spawn[1] * canvas.height,
+        ship,
+        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
+      })
+    );
   }
   tick++;
   ship.update(enemies, tick);
@@ -1887,7 +1994,10 @@ const mainGameLoop = () => {
   });
   // Win Condition
   if (ship.scrap === 200) {
-    setTimeout(() => (gameOver = new GameOver(ship, true)), 3000);
+    setTimeout(() => {
+      enemies = [];
+      gameOver = new GameOver(ship, true);
+    }, 3000);
   }
 };
 /**
@@ -1938,7 +2048,7 @@ const loop = GameLoop({
   }
 });
 // Listen for enemy hits
-canvas.addEventListener('enemyHit', ({ detail }) => {
+canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship

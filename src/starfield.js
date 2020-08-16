@@ -5,13 +5,14 @@ class StarField extends GameObject.class {
   }
 
   draw() {
-    this.context.fillStyle = '#000';
-    this.context.fillRect(-this.x, -this.y, this.context.canvas.width, this.context.canvas.height);
-    this.context.fillStyle = '#fff';
-    for (let i = 0; i < this.context.canvas.width * this.context.canvas.height * 0.0001; i++) {
-      this.context.fillRect(
-        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % this.context.canvas.width),
-        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % this.context.canvas.height),
+    const ctx = this.context;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < ctx.canvas.width * ctx.canvas.height * 0.0001; i++) {
+      ctx.fillRect(
+        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
+        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
       );

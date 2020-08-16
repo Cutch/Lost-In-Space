@@ -15,24 +15,26 @@ class Cockpit extends GameObject.class {
   showSkipHelper = false;
   constructor(props) {
     super(props);
-    this.dayText = new Text(fontProps);
-    this.scrapText = new Text(fontProps);
-    this.healthText = new Text(fontProps);
-    this.skipHelper = new Text({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
-    this.statusTextBackground = new Sprite({ color: '#6009' });
+    const _this = this;
+    _this.dayText = new Text(fontProps);
+    _this.scrapText = new Text(fontProps);
+    _this.healthText = new Text(fontProps);
+    _this.skipHelper = new Text({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
+    _this.statusTextBackground = new Sprite({ color: '#6009' });
   }
   setSkipHelper(on) {
     this.showSkipHelper = on;
   }
 
   render() {
-    this.dayText.render();
-    this.scrapText.render();
-    this.healthText.render();
-    if (this.statusText) {
-      this.statusTextBackground.render();
-      this.statusText.render();
-      if (this.showSkipHelper) this.skipHelper.render();
+    const _this = this;
+    _this.dayText.render();
+    _this.scrapText.render();
+    _this.healthText.render();
+    if (_this.statusText) {
+      _this.statusTextBackground.render();
+      _this.statusText.render();
+      if (_this.showSkipHelper) _this.skipHelper.render();
     }
   }
   addStatus(text, time = 6000) {
@@ -55,25 +57,26 @@ class Cockpit extends GameObject.class {
     } else this.statusText = null;
   }
   update(ship) {
-    const w = this.context.canvas.width;
-    const h = this.context.canvas.height;
-    this.dayText.x = w - pad;
-    this.dayText.y = h - pad - fontSize;
-    this.scrapText.x = w - pad;
-    this.scrapText.y = h - 45 - pad - fontSize;
-    this.healthText.x = w - pad;
-    this.healthText.y = h - 90 - pad - fontSize;
-    this.scrapText.text = `Scrap: ${ship.scrap}t`;
-    this.dayText.text = `Day: ${ship.day}`;
-    this.healthText.text = `Hull Integrity: ${ship.health}%`;
-    if (this.statusText) {
-      this.statusTextBackground.width = w;
-      this.statusTextBackground.height = fontSize + pad * 2;
-      this.statusText.x = w / 2;
-      this.statusText.y = pad;
-      if (this.showSkipHelper) {
-        this.skipHelper.x = w / 2 + 150;
-        this.skipHelper.y = pad * 2 + 7;
+    const _this = this;
+    const w = _this.context.canvas.width;
+    const h = _this.context.canvas.height;
+    _this.dayText.x = w - pad;
+    _this.dayText.y = h - pad - fontSize;
+    _this.scrapText.x = w - pad;
+    _this.scrapText.y = h - 45 - pad - fontSize;
+    _this.healthText.x = w - pad;
+    _this.healthText.y = h - 90 - pad - fontSize;
+    _this.scrapText.text = `Scrap: ${ship.scrap}t`;
+    _this.dayText.text = `Day: ${ship.day}`;
+    _this.healthText.text = `Hull Integrity: ${ship.health}%`;
+    if (_this.statusText) {
+      _this.statusTextBackground.width = w;
+      _this.statusTextBackground.height = fontSize + pad * 2;
+      _this.statusText.x = w / 2;
+      _this.statusText.y = pad;
+      if (_this.showSkipHelper) {
+        _this.skipHelper.x = w / 2 + 150;
+        _this.skipHelper.y = pad * 2 + 7;
       }
     }
   }
