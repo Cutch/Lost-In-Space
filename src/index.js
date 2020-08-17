@@ -24,6 +24,7 @@ let titleText = new Text({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
+const pauseText = new Text({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
  */
@@ -34,6 +35,7 @@ let starField;
 let ship;
 let enemies;
 let tick;
+let paused;
 /**
  * Initial values for the game start and setup
  */
@@ -43,6 +45,7 @@ const initGame = () => {
   cockpit = new Cockpit();
   starField = new StarField();
   ship = new Ship(cockpit);
+  paused = false;
   tick = 1;
   enemies = [];
   [
@@ -54,15 +57,27 @@ const initGame = () => {
     'Computer: All systems have been destroyed.',
     'Me: Ugh, now I need some scrap to fix the systems.',
     'Computer: 200t of scrap are needed',
-    'Computer: Use my WASD keys to fly and The Bar to shoot.'
+    'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
   ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
 
+let escapeKeyUp = true;
 /**
  * Update the main game loop
  */
 const mainGameLoop = () => {
+  /**
+   * Pause functionality
+   */
+  if (keyPressed('esc')) {
+    if (escapeKeyUp) {
+      escapeKeyUp = false;
+      paused = !paused;
+    }
+  } else escapeKeyUp = true;
+  // Block main game loop on pause
+  if (paused) return;
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
     /**
@@ -135,7 +150,6 @@ const gameStartLoop = () => {
   } else keyUp = true; // Set the key is up
   cockpit.update(ship);
 };
-
 const loop = GameLoop({
   clearCanvas: false,
   // create the main game loop
@@ -148,10 +162,13 @@ const loop = GameLoop({
     // Keep ship centered
     ship.x = canvas.width / 2;
     ship.y = canvas.height / 2;
+    pauseText.x = ship.x;
+    pauseText.y = ship.y;
   },
   render: () => {
     mainGameRender();
-    if (gameOver) gameOver.render();
+    if (paused) pauseText.render();
+    else if (gameOver) gameOver.render();
     else if (gameStart) gameStartLoop();
     if (titleText) titleText.render();
   }

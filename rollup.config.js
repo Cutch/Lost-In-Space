@@ -2,6 +2,8 @@ import kontra from 'rollup-plugin-kontra';
 import { terser } from 'rollup-plugin-terser';
 import resolve from '@rollup/plugin-node-resolve';
 import fs from 'fs';
+import JSZip from 'jszip';
+const zip = new JSZip();
 
 function replaceStrings(options = {}) {
   return {
@@ -124,7 +126,6 @@ function replaceStrings(options = {}) {
       code = `const _t=${JSON.stringify(textDict)};${code}`;
       // Comment in to wrap in function for variable safety
       code = code.replace(`,ArrowLeft:"left",ArrowUp:"up",ArrowRight:_t.a,ArrowDown:"down"`, '');
-      code = code.replace(`Escape:"esc",`, '');
 
       // const compressedCode = code
       //   .split(/|/)
@@ -163,8 +164,18 @@ function replaceStrings(options = {}) {
       if (bodyI == -1) console.error('Missing body in template.html');
       else {
         const html = content.slice(0, bodyI) + `<script>${code}</script>` + content.slice(bodyI);
-        console.log('Bundle Bytes: ', html.length, html.length <= 13312 ? 'Under 13KB' : 'Above 13KB');
+        console.log('Index Bytes: ', html.length, html.length <= 13312 ? 'Under 13KB' : 'Above 13KB');
         fs.writeFileSync('index.html', html, 'utf8');
+        zip.file('index.html', html);
+        zip
+          .generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
+          .pipe(fs.createWriteStream('bundle.zip'))
+          .on('finish', function() {
+            // JSZip generates a readable stream with a "end" event,
+            // but is piped here in a writable stream which emits a "finish" event.
+            const content = fs.readFileSync('bundle.zip', 'utf8');
+            console.log('Bundle Bytes: ', content.length, content.length <= 13312 ? 'Under 13KB' : 'Above 13KB');
+          });
       }
 
       return code;
