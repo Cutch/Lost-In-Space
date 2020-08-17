@@ -1,7 +1,7 @@
 import kontra from 'rollup-plugin-kontra';
 import { terser } from 'rollup-plugin-terser';
 import resolve from '@rollup/plugin-node-resolve';
-import bundleSize from 'rollup-plugin-bundle-size';
+import fs from 'fs';
 
 function replaceStrings(options = {}) {
   return {
@@ -94,8 +94,15 @@ function replaceStrings(options = {}) {
         .filter((x, i, a) => a.indexOf(x) === i)
         .forEach(replaceDotVars);
       code = `const _t=${JSON.stringify(textDict)};${code}`;
+      // Comment in to wrap in function for variable safety
       code = 'function lis(){' + code + '};lis();';
-      console.log(code.length);
+      console.log('Bundle Bytes: ', code.length);
+      const content = fs.readFileSync('template.html', 'utf8');
+      const headI = content.indexOf('</body>');
+      if (headI == -1) console.error('Missing head in template.html');
+      else {
+        fs.writeFileSync('index.html', content.slice(0, headI) + `<script>${code}</script>` + content.slice(headI), 'utf8');
+      }
 
       return code;
     }
@@ -111,20 +118,15 @@ export default [
       }
     ],
     plugins: [
-      resolve(), // so Rollup can find `ms`
+      resolve(),
       kontra({
         gameObject: {
           velocity: true,
           rotation: true,
           anchor: true
         },
-        // vector: {
-        // enable vector length functionality
-        // length: true
-        // },
         text: { textAlign: true }
-      }),
-      bundleSize()
+      })
     ]
   },
   {
@@ -145,19 +147,14 @@ export default [
             compress: {
               passes: 1,
               booleans_as_integers: true,
-              // arguments: true,
               module: true,
               toplevel: true,
               ecma: 6
-              // hoist_funs: true,
-              // hoist_vars: true
             },
             module: true,
             ecma: 2016
           }),
-          replaceStrings(),
-          bundleSize()
-          // bundleSize()
+          replaceStrings()
         ]
       }
     ]
