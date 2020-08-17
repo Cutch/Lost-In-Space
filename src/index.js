@@ -4,6 +4,7 @@ import Cockpit from './cockpit';
 import Ship from './ship';
 import Enemy from './enemy';
 import GameOver from './gameOver';
+import { randomPointOutsideView } from './misc';
 const { canvas } = init();
 /**
  * Track the browser window and resize the canvas
@@ -80,25 +81,17 @@ const mainGameLoop = () => {
   if (paused) return;
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
-    /**
-     * Generate a spawn location outside of the canvas
-     * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
-     * X,Y are randomly flipped
-     */
-    const spawn = [Math.random() * 1.5, Math.random() - 0.5];
-    spawn[1] = Math.sign(spawn[1]) + spawn[1];
-    if (Math.random() > 0.5) spawn.reverse();
+    const [x, y] = randomPointOutsideView(canvas);
     /**
      * Determine the possibility for the health
      * After day 3, chance goes up above health 1.
      * Day 23 has the max chance of seeing health 3
      */
-
     const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
     enemies.push(
       new Enemy({
-        x: spawn[0] * canvas.width,
-        y: spawn[1] * canvas.height,
+        x: x,
+        y: y,
         ship,
         health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
       })
@@ -110,7 +103,7 @@ const mainGameLoop = () => {
   // Move the background based on the ship's speed
   starField.dx = ship.speedX;
   starField.dy = ship.speedY;
-  starField.update();
+  starField.update(tick);
   enemies.forEach(e => {
     e.dx = ship.speedX;
     e.dy = ship.speedY;
@@ -164,6 +157,10 @@ const loop = GameLoop({
     ship.y = canvas.height / 2;
     pauseText.x = ship.x;
     pauseText.y = ship.y;
+    if (titleText) {
+      titleText.x = canvas.width / 2;
+      titleText.y = canvas.height / 4;
+    }
   },
   render: () => {
     mainGameRender();

@@ -92,6 +92,48 @@ function init(canvas) {
 const noop = () => {};
 
 /**
+ * Return the angle in radians from one point to another point.
+ *
+ * ```js
+ * import { angleToTarget, Sprite } from 'kontra';
+ *
+ * let sprite = Sprite({
+ *   x: 10,
+ *   y: 10,
+ *   width: 20,
+ *   height: 40,
+ *   color: 'blue'
+ * });
+ *
+ * sprite.rotation = angleToTarget(sprite, {x: 100, y: 30});
+ *
+ * let sprite2 = Sprite({
+ *   x: 100,
+ *   y: 30,
+ *   width: 20,
+ *   height: 40,
+ *   color: 'red',
+ * });
+ *
+ * sprite2.rotation = angleToTarget(sprite2, sprite);
+ * ```
+ * @function angleToTarget
+ *
+ * @param {{x: Number, y: Number}} source - The source point.
+ * @param {{x: Number, y: Number}} target - The target point.
+ *
+ * @returns {Number} Angle (in radians) from the source point to the target point.
+ */
+function angleToTarget(source, target) {
+
+  // atan2 returns the counter-clockwise angle in respect to the x-axis, but
+  // the canvas rotation system is based on the y-axis (rotation of 0 = up).
+  // so we need to add a quarter rotation to return a counter-clockwise
+  // rotation in respect to the y-axis
+  return Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
+}
+
+/**
  * Rotate a point by an angle.
  * @function rotatePoint
  *
@@ -1329,7 +1371,7 @@ const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
   x > x1 - width / 2 && x < x1 + width / 2 && y > y1 - height / 2 && y < y1 + height / 2;
 
 const distance = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-const angleToTarget = (source, target) => Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
+const angleToTarget$1 = (source, target) => Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
 const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
@@ -1346,25 +1388,72 @@ const seedRand = function(s) {
 // Test [...Array(to).keys()] compatibility
 // eslint-disable-next-line prefer-spread
 const range = to => Array.apply(null, Array(to)).map((x, i) => i);
+const randomPointOutsideView = ({ width, height }) => {
+  /**
+   * Generate a spawn location outside of the canvas
+   * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
+   * X,Y are randomly flipped
+   */
+  const spawn = [Math.random() * 1.5, Math.random() - 0.5];
+  spawn[1] = Math.sign(spawn[1]) + spawn[1];
+  if (Math.random() > 0.5) spawn.reverse();
+  spawn[0] *= width;
+  spawn[1] *= height;
+  return spawn;
+};
 
 class StarField extends factory$2.class {
+  shootingStars = [];
   constructor(properties) {
     super(properties);
   }
 
   draw() {
-    const ctx = this.context;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = '#fff';
-    range(Math.floor(ctx.canvas.width * ctx.canvas.height * 0.0001)).forEach(i =>
-      ctx.fillRect(
-        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
-        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
+    const { context } = this;
+    /**
+     * Draw the star field
+     */
+    context.fillStyle = '#000';
+    context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    context.fillStyle = '#fff';
+    range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
+      context.fillRect(
+        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.width),
+        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
       )
     );
+  }
+  update(tick) {
+    super.update();
+    this.shootingStars.forEach((s, i) => {
+      s.update();
+      if (tick - s.tick > 300) this.shootingStars.splice(i, 1);
+    });
+    /**
+     * Shooting star spawn
+     */
+    if (tick % 300 == 0) {
+      const [x, y] = randomPointOutsideView(this.context.canvas);
+      this.shootingStars.push(
+        new factory$3({
+          color: '#fff',
+          x,
+          y,
+          width: 2,
+          height: 4,
+          tick,
+          dx: -Math.sign(x) * 7,
+          dy: -Math.sign(y) * 7,
+          rotation: angleToTarget({ x, y }, { x: -x, y: -y })
+        })
+      );
+    }
+  }
+  render() {
+    super.render();
+    this.shootingStars.forEach(s => s.render());
   }
 }
 /* Twinkle
@@ -1584,6 +1673,10 @@ const getPattern = () => {
   triangle(patternContext, 30, 5, 20, 40, 40);
   patternContext.fillStyle = '#222';
   triangle(patternContext, 30, 15, 25, 35, 35);
+  patternContext.fillStyle = '#AAA';
+  range(4).forEach(i => {
+    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 60, i * 10 + 20);
+  });
   return patternCanvas;
 };
 class Ship extends factory$2.class {
@@ -1781,7 +1874,7 @@ class Enemy extends factory$3.class {
         if (e !== _this) {
           const dist = distanceToTarget(_this, e);
           if (dist < a.dist) {
-            const angle = angleToTarget(_this, e) + 180;
+            const angle = angleToTarget$1(_this, e) + 180;
             return {
               angle,
               dist
@@ -1795,7 +1888,7 @@ class Enemy extends factory$3.class {
     /**
      * Find the path to the players ship
      */
-    let angle = angleToTarget(_this, _this.ship);
+    let angle = angleToTarget$1(_this, _this.ship);
     if (avoidEnemies.dist !== 100) angle = avoidEnemies.angle + angle / 2;
     _this.speedX -= Math.sin(angle) * accSpeed;
     _this.speedY += Math.cos(angle) * accSpeed;
@@ -1972,25 +2065,17 @@ const mainGameLoop = () => {
   if (paused) return;
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
-    /**
-     * Generate a spawn location outside of the canvas
-     * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
-     * X,Y are randomly flipped
-     */
-    const spawn = [Math.random() * 1.5, Math.random() - 0.5];
-    spawn[1] = Math.sign(spawn[1]) + spawn[1];
-    if (Math.random() > 0.5) spawn.reverse();
+    const [x, y] = randomPointOutsideView(canvas);
     /**
      * Determine the possibility for the health
      * After day 3, chance goes up above health 1.
      * Day 23 has the max chance of seeing health 3
      */
-
     const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
     enemies.push(
       new Enemy({
-        x: spawn[0] * canvas.width,
-        y: spawn[1] * canvas.height,
+        x: x,
+        y: y,
         ship,
         health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
       })
@@ -2002,7 +2087,7 @@ const mainGameLoop = () => {
   // Move the background based on the ship's speed
   starField.dx = ship.speedX;
   starField.dy = ship.speedY;
-  starField.update();
+  starField.update(tick);
   enemies.forEach(e => {
     e.dx = ship.speedX;
     e.dy = ship.speedY;
@@ -2056,6 +2141,10 @@ const loop = GameLoop({
     ship.y = canvas.height / 2;
     pauseText.x = ship.x;
     pauseText.y = ship.y;
+    if (titleText) {
+      titleText.x = canvas.width / 2;
+      titleText.y = canvas.height / 4;
+    }
   },
   render: () => {
     mainGameRender();

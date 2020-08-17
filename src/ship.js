@@ -30,6 +30,10 @@ const getPattern = () => {
   triangle(patternContext, 30, 5, 20, 40, 40);
   patternContext.fillStyle = '#222';
   triangle(patternContext, 30, 15, 25, 35, 35);
+  patternContext.fillStyle = '#AAA';
+  range(4).forEach(i => {
+    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 60, i * 10 + 20);
+  });
   return patternCanvas;
 };
 class Ship extends GameObject.class {

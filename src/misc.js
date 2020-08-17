@@ -20,3 +20,16 @@ export const seedRand = function(s) {
 // Test [...Array(to).keys()] compatibility
 // eslint-disable-next-line prefer-spread
 export const range = to => Array.apply(null, Array(to)).map((x, i) => i);
+export const randomPointOutsideView = ({ width, height }) => {
+  /**
+   * Generate a spawn location outside of the canvas
+   * Initially only the y is guaranteed outside the canvas, [0-1.5, 1-1.5]
+   * X,Y are randomly flipped
+   */
+  const spawn = [Math.random() * 1.5, Math.random() - 0.5];
+  spawn[1] = Math.sign(spawn[1]) + spawn[1];
+  if (Math.random() > 0.5) spawn.reverse();
+  spawn[0] *= width;
+  spawn[1] *= height;
+  return spawn;
+};

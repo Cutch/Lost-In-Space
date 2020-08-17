@@ -1,23 +1,57 @@
-import { GameObject } from 'kontra';
-import { range } from './misc';
+import { GameObject, Sprite, angleToTarget } from 'kontra';
+import { range, randomPointOutsideView } from './misc';
 class StarField extends GameObject.class {
+  shootingStars = [];
   constructor(properties) {
     super(properties);
   }
 
   draw() {
-    const ctx = this.context;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = '#fff';
-    range(Math.floor(ctx.canvas.width * ctx.canvas.height * 0.0001)).forEach(i =>
-      ctx.fillRect(
-        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
-        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
+    const { context } = this;
+    /**
+     * Draw the star field
+     */
+    context.fillStyle = '#000';
+    context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    context.fillStyle = '#fff';
+    range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
+      context.fillRect(
+        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.width),
+        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
       )
     );
+  }
+  update(tick) {
+    super.update();
+    this.shootingStars.forEach((s, i) => {
+      s.update();
+      if (tick - s.tick > 300) this.shootingStars.splice(i, 1);
+    });
+    /**
+     * Shooting star spawn
+     */
+    if (tick % 300 == 0) {
+      const [x, y] = randomPointOutsideView(this.context.canvas);
+      this.shootingStars.push(
+        new Sprite({
+          color: '#fff',
+          x,
+          y,
+          width: 2,
+          height: 4,
+          tick,
+          dx: -Math.sign(x) * 7,
+          dy: -Math.sign(y) * 7,
+          rotation: angleToTarget({ x, y }, { x: -x, y: -y })
+        })
+      );
+    }
+  }
+  render() {
+    super.render();
+    this.shootingStars.forEach(s => s.render());
   }
 }
 export default StarField;
