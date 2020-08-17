@@ -7,6 +7,7 @@ export const angleToTarget = (source, target) => Math.atan2(target.y - source.y,
 export const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
+  repair: 'Hull Repaired',
   warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
   // secondaryWeapon: 'Secondary Weapon Online'
 };

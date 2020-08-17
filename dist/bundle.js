@@ -1483,6 +1483,7 @@ const angleToTarget = (source, target) => Math.atan2(target.y - source.y, target
 const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
+  repair: 'Hull Repaired',
   warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
   // secondaryWeapon: 'Secondary Weapon Online'
 };
@@ -1501,7 +1502,7 @@ class Bullet extends factory$3.class {
       .filter(e => pointInRect(this, e))
       .forEach(hitEnemy => {
         this.hit = true;
-        hitEnemy.health--;
+        hitEnemy.minusHealth();
         if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
   }
@@ -1509,6 +1510,7 @@ class Bullet extends factory$3.class {
 
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let fireSound = () => {};
+let crashSound = () => {};
 let engineSoundOn = () => {};
 let engineSoundOff = () => {};
 if (AudioContext) {
@@ -1517,12 +1519,25 @@ if (AudioContext) {
     const o = ctx.createOscillator();
     o.type = 'square';
     const g = ctx.createGain();
+    g.gain.value = 0.5;
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
     o.frequency.value = 100;
     o.connect(g);
     g.connect(ctx.destination);
     o.start();
     setTimeout(() => o.stop(), 100);
+  };
+  crashSound = () => {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    const g = ctx.createGain();
+    g.gain.value = 0.5;
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+    o.frequency.value = 50;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => o.stop(), 150);
   };
   let engineSounds;
   let gain;
@@ -1545,12 +1560,12 @@ if (AudioContext) {
       });
       const gainMaster = ctx.createGain();
       gain = gainMaster.gain;
-      gain.value = 0.05;
+      gain.value = 0.1;
       filter.connect(gainMaster);
       gainMaster.connect(ctx.destination);
     } else {
       gain.cancelScheduledValues(ctx.currentTime);
-      gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.setValueAtTime(0.1, ctx.currentTime);
     }
   };
   engineSoundOff = () => {
@@ -1566,9 +1581,44 @@ if (AudioContext) {
 
   window.addEventListener('keydown', () => {
     ctx.resume();
+    // crashSound();
   });
 }
 
+// x,y point path of ship
+const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 60, 45, 60, 60, 57, 60, 45, 40, 30, 37.5, 15];
+const triangle = (ctx, x1, y1, x2, y2, x3, y3) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.lineTo(x3, y3);
+  ctx.fill();
+};
+const getPattern = () => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+
+  // Give the pattern a width and height of 50
+  patternCanvas.width = 60;
+  patternCanvas.height = 60;
+
+  // Give the pattern a background color
+  // const shipGrad = patternContext.createLinearGradient(0, 0, 60, 0);
+  // shipGrad.addColorStop(0.0, '#fff');
+  // shipGrad.addColorStop(0.5, '#000');
+  // shipGrad.addColorStop(1, '#fff');
+  patternContext.fillStyle = '#888';
+  patternContext.fillRect(0, 0, 60, 60);
+  patternContext.fillStyle = '#444';
+  triangle(patternContext, 40, 30, 50, 60, 80, 60);
+  triangle(patternContext, 20, 30, 10, 60, -20, 60);
+  patternContext.fillStyle = '#666';
+  triangle(patternContext, 30, 5, 20, 40, 40, 40);
+  patternContext.fillStyle = '#222';
+  triangle(patternContext, 30, 15, 25, 35, 35, 35);
+  // triangle(patternContext, '#222', 60, -30, 50, 30, 40, 30);
+  return patternCanvas;
+};
 class Ship extends factory$2.class {
   maxShipSpeed = 4;
   hasWarp = false;
@@ -1580,62 +1630,34 @@ class Ship extends factory$2.class {
   engineLevel = 1; // Ship's level
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
-
+  rotating = false;
   constructor(cockpit) {
     super({
       width: 60,
       height: 60,
-      mw: 30, // Half Width
-      mh: 30, // Half Height
       speedX: 0,
       speedY: 0,
-      health: 100
+      health: 100,
+      anchor: { x: 0.5, y: 0.5 }
     });
     const _this = this;
     const ctx = _this.context;
     _this.cockpit = cockpit;
     // Engine fire gradient
-    _this.fireGrad = ctx.createLinearGradient(0, _this.mh, 0, _this.mh + 20);
-    _this.fireGrad.addColorStop(0, '#f00');
-    _this.fireGrad.addColorStop(0.5, '#600');
+    _this.fireGrad = ctx.createLinearGradient(0, 0, 0, 80);
+    _this.fireGrad.addColorStop(0.6, '#f00');
+    _this.fireGrad.addColorStop(1, '#600');
     // Ship texture
-    _this.shipGrad = ctx.createLinearGradient(-40, 0, 40, 0);
-    _this.shipGrad.addColorStop(0.0, '#000');
-    _this.shipGrad.addColorStop(0.5, '#fff');
-    _this.shipGrad.addColorStop(1, '#000');
+    _this.color = this.context.createPattern(getPattern(), 'repeat');
 
-    // x,y point path of ship
-    _this.shipPath = [
-      0,
-      -_this.mh,
-      -_this.mw / 4,
-      -_this.mh / 2,
-      -_this.mw / 3,
-      0,
-      -_this.mw,
-      _this.mh / 2,
-      -_this.mw,
-      _this.mh * 0.9,
-      -_this.mw / 2,
-      _this.mh,
-      _this.mw / 2,
-      _this.mh,
-      _this.mw,
-      _this.mh * 0.9,
-      _this.mw,
-      _this.mh / 2,
-      _this.mw / 3,
-      0,
-      _this.mw / 4,
-      -_this.mh / 2
-    ];
     _this.upgrades = [
       [20, () => (_this.fireRate = 15), text.fireRateUpdated],
       [40, () => ((_this.maxShipSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
       [60, () => (_this.fireRate = 10), text.fireRateUpdated],
       [80, () => ((_this.maxShipSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
-      [100, () => (_this.fireRate = 5), text.fireRateUpdated],
-      [120, () => ((_this.maxShipSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [100, () => (_this.health = Math.min(100, _this.health + 50)), text.repair],
+      [120, () => (_this.fireRate = 5), text.fireRateUpdated],
+      [140, () => ((_this.maxShipSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
       [200, () => (_this.hasWarp = true), text.warpDrive]
     ];
     // Listen for enemies hit, by ship or bullets
@@ -1654,9 +1676,9 @@ class Ship extends factory$2.class {
     const _this = this;
     // Generate Ship
     const ctx = _this.context;
-    ctx.fillStyle = _this.shipGrad;
+    ctx.fillStyle = _this.color;
     ctx.beginPath();
-    for (let i = 0; i < _this.shipPath.length; i += 2) ctx.lineTo(_this.shipPath[i], _this.shipPath[i + 1]);
+    for (let i = 0; i < shipPath.length; i += 2) ctx.lineTo(shipPath[i], shipPath[i + 1]);
     ctx.fill();
     if (_this.showExhaust) {
       // Generate Exhaust
@@ -1665,10 +1687,7 @@ class Ship extends factory$2.class {
       const r = Math.random();
       const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
       for (let i = 0; i <= 12; i++) {
-        ctx.lineTo(
-          -_this.mw / 2 + (_this.width / 2 / 12) * i,
-          _this.mh + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3)))
-        );
+        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))));
       }
       ctx.fill();
     }
@@ -1691,6 +1710,7 @@ class Ship extends factory$2.class {
     enemies
       .filter(e => distanceToTarget({ x: _this.x, y: _this.y }, e) < 55)
       .forEach(hitEnemy => {
+        crashSound();
         _this.health -= 10;
         _this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
@@ -1716,12 +1736,14 @@ class Ship extends factory$2.class {
       }
     }
     // Rotate on key press
+    const angle = 0.05 / (this.rotating ? 1 : 2);
     if (keyPressed('a')) {
-      _this.rotation = _this.rotation - 0.05;
-    }
-    if (keyPressed('d')) {
-      _this.rotation = _this.rotation + 0.05;
-    }
+      _this.rotation = _this.rotation - angle;
+      this.rotating = true;
+    } else if (keyPressed('d')) {
+      _this.rotation = _this.rotation + angle;
+      this.rotating = true;
+    } else this.rotating = false;
   }
   fire(tick) {
     const _this = this;
@@ -1739,7 +1761,7 @@ class Ship extends factory$2.class {
 }
 
 const accSpeed = 0.1;
-const getPattern = color => {
+const getPattern$1 = color => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
 
@@ -1764,15 +1786,20 @@ const getPattern = color => {
   }
   return patternCanvas;
 };
-const colors = ['#080', '#008', '#800'].map(getPattern);
+const colors = ['#080', '#008', '#800'].map(getPattern$1);
 class Enemy extends factory$3.class {
   constructor(properties) {
     properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
+    this.health++;
+    this.minusHealth();
+  }
+  minusHealth() {
+    this.health--;
+    if (this.health > 0) this.color = this.context.createPattern(colors[this.health - 1], null);
   }
   update(enemies) {
     const _this = this;
-    this.color = this.context.createPattern(colors[this.health - 1], null);
     /**
      * Find the closest other enemy
      */

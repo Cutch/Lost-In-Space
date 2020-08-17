@@ -76,12 +76,28 @@ function replaceStrings(options = {}) {
           }
         }
       });
-      // const newVar = getNextVar();
-      // textDict[newVar] = 'textAlign';
-      // code = code.replace(new RegExp('textAlign:', 'g'), `(_t.${newVar}):`);
+      const replaceDotVars = value => {
+        const matches = code.match(new RegExp(`\\.${value}`, 'g'));
+        if (matches) {
+          const matchesCount = matches.length;
+          const worthIt = matchesCount * (value.length + 1) - matchesCount * 6 - 7 - value.length;
+          if (worthIt > 0) {
+            const newVar = getNextVar();
+            textDict[newVar] = value;
+            code = code.replace(new RegExp(`\\.${value}`, 'gm'), `[_t.${newVar}]`);
+          }
+        }
+      };
+      code
+        .match(/\.[a-zA-Z0-9]+/gm)
+        .map(x => x.slice(1))
+        .filter((x, i, a) => a.indexOf(x) === i)
+        .forEach(replaceDotVars);
       code = `const _t=${JSON.stringify(textDict)};${code}`;
+      code = 'function lis(){' + code + '};lis();';
+      console.log(code.length);
 
-      return 'function lis(){' + code + '};lis();';
+      return code;
     }
   };
 }

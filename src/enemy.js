@@ -31,10 +31,15 @@ class Enemy extends Sprite.class {
   constructor(properties) {
     properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
+    this.health++;
+    this.minusHealth();
+  }
+  minusHealth() {
+    this.health--;
+    if (this.health > 0) this.color = this.context.createPattern(colors[this.health - 1], null);
   }
   update(enemies) {
     const _this = this;
-    this.color = this.context.createPattern(colors[this.health - 1], null);
     /**
      * Find the closest other enemy
      */
