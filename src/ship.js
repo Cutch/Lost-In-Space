@@ -1,5 +1,5 @@
 import { GameObject, keyPressed } from 'kontra';
-import { distanceToTarget, text, distance, seedRand } from './misc';
+import { distanceToTarget, text, distance, range } from './misc';
 import Bullet from './bullet';
 import { fireSound, engineSoundOff, engineSoundOn, crashSound } from './sound';
 // x,y point path of ship
@@ -19,11 +19,6 @@ const getPattern = () => {
   patternCanvas.width = 60;
   patternCanvas.height = 60;
 
-  // Give the pattern a background color
-  // const shipGrad = patternContext.createLinearGradient(0, 0, 60, 0);
-  // shipGrad.addColorStop(0.0, '#fff');
-  // shipGrad.addColorStop(0.5, '#000');
-  // shipGrad.addColorStop(1, '#fff');
   patternContext.fillStyle = '#888';
   patternContext.fillRect(0, 0, 60, 60);
   patternContext.fillStyle = '#444';
@@ -35,7 +30,6 @@ const getPattern = () => {
   triangle(patternContext, 30, 5, 20, 40, 40);
   patternContext.fillStyle = '#222';
   triangle(patternContext, 30, 15, 25, 35, 35);
-  // triangle(patternContext, '#222', 60, -30, 50, 30, 40, 30);
   return patternCanvas;
 };
 class Ship extends GameObject.class {
@@ -105,9 +99,10 @@ class Ship extends GameObject.class {
       ctx.beginPath();
       const r = Math.random();
       const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
-      for (let i = 0; i <= 12; i++) {
-        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))));
-      }
+      // 0-12 incl 12
+      range(13).forEach(i =>
+        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
+      );
       ctx.fill();
     }
   }
@@ -154,7 +149,9 @@ class Ship extends GameObject.class {
         _this.speedY *= _this.maxShipSpeed / speed;
       }
     }
+
     // Rotate on key press
+    // Do a half turn on first key press
     const angle = 0.05 / (this.rotating ? 1 : 2);
     if (keyPressed('a')) {
       _this.rotation = _this.rotation - angle;

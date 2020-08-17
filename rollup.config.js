@@ -7,14 +7,53 @@ function replaceStrings(options = {}) {
   return {
     name: 'replace-strings',
     renderChunk(code, chunk, outputOptions) {
+      const alphaI = {};
+      const alphabet = [];
+      // const range = to => [...Array(to).keys()];
+      for (let i = 97; i <= 122; i++) alphabet.push(String.fromCharCode(i));
+      for (let i = 65; i <= 90; i++) alphabet.push(String.fromCharCode(i));
+      const getNextVar = id => {
+        // const n = Math.ceil(alphaI / alphabet.length);
+        const i = alphaI[id] || 0;
+        const text = alphabet[i];
+        // for (let i = 0; i < n; i++) {
+        //   text += alphabet[alphaI];
+        // }
+        alphaI[id] = i + 1;
+        // console.log(text);
+        return text;
+      };
       /**
        * Make simple string replaces for minimization
        */
       if (code.match(/window\.addEventListener/)) {
         code = 'const _a=window.addEventListener;' + code.replace(/window\.addEventListener/g, '_a');
       }
+      if (code.match(/document/)) {
+        code = 'const _d=document;' + code.replace(/document/g, '_d');
+      }
+
       if (code.match(/Math/)) {
-        code = 'const _m=Math;' + code.replace(/Math/g, '_m');
+        code = code.replace(/Math/g, '_m');
+
+        const replaceMathFunctions = value => {
+          const matches = code.match(new RegExp(`_m.${value}`, 'g'));
+          if (matches) {
+            const matchesCount = matches.length;
+            const worthIt = matchesCount * value.length - matchesCount * 2 - 13 - value.length;
+            if (worthIt > 0) {
+              const newVar = 'X' + getNextVar(1);
+              code = code.replace(new RegExp(`_m\\.${value}`, 'gm'), `${newVar}`);
+              code = `const ${newVar}=_m.${value};` + code.replace(/Math/g, '_m');
+            }
+          }
+        };
+        code
+          .match(/_m.[a-zA-Z]+/gm)
+          .map(x => x.slice(3))
+          .filter((x, i, a) => a.indexOf(x) === i)
+          .forEach(replaceMathFunctions);
+        code = 'const _m=Math;' + code;
       }
       if (code.match(/rotation/)) {
         code = code.replace(/rotation/g, '_r');
@@ -35,6 +74,7 @@ function replaceStrings(options = {}) {
       if (code.match(/context/)) {
         code = code.replace(/context/g, '_c');
       }
+
       // if (code.match(/textAlign/)) {
       //   code = code.replace(/textAlign/g, 'aa');
       // }
@@ -53,24 +93,11 @@ function replaceStrings(options = {}) {
           t[match] = (t[match] || 0) + 1;
           return t;
         }, {});
-      let alphaI = 0;
-      const alphabet = [];
-      const getNextVar = () => {
-        // const n = Math.ceil(alphaI / alphabet.length);
-        const text = alphabet[alphaI];
-        // for (let i = 0; i < n; i++) {
-        //   text += alphabet[alphaI];
-        // }
-        alphaI++;
-        return text;
-      };
-      for (let i = 97; i <= 122; i++) alphabet.push(String.fromCharCode(i));
-      for (let i = 65; i <= 90; i++) alphabet.push(String.fromCharCode(i));
       const textDict = {};
       Object.keys(replaceCount).forEach(key => {
         if (replaceCount[key] > 1) {
           if (key.length > 2) {
-            const newVar = getNextVar();
+            const newVar = getNextVar(2);
             textDict[newVar] = key.replace(/"/g, '');
             code = code.replace(new RegExp(key, 'g'), `_t.${newVar}`);
           }
@@ -82,7 +109,7 @@ function replaceStrings(options = {}) {
           const matchesCount = matches.length;
           const worthIt = matchesCount * (value.length + 1) - matchesCount * 6 - 7 - value.length;
           if (worthIt > 0) {
-            const newVar = getNextVar();
+            const newVar = getNextVar(2);
             textDict[newVar] = value;
             code = code.replace(new RegExp(`\\.${value}`, 'gm'), `[_t.${newVar}]`);
           }
@@ -93,9 +120,43 @@ function replaceStrings(options = {}) {
         .map(x => x.slice(1))
         .filter((x, i, a) => a.indexOf(x) === i)
         .forEach(replaceDotVars);
+
       code = `const _t=${JSON.stringify(textDict)};${code}`;
       // Comment in to wrap in function for variable safety
       code = code.replace(`,ArrowLeft:"left",ArrowUp:"up",ArrowRight:_t.a,ArrowDown:"down"`, '');
+      code = code.replace(`Escape:"esc",`, '');
+
+      // const compressedCode = code
+      //   .split(/|/)
+      //   .map(x => x.charCodeAt(0))
+      //   .reduce(
+      //     (p, c, i, arr) => {
+      //       if (i % 32 === 31 || i === arr.length - 1) {
+      //         p.code += String.fromCharCode(p.char | (c << i % 32));
+      //         p.char = 0;
+      //       } else {
+      //         p.char |= c << i % 32;
+      //       }
+      //       return p;
+      //     },
+      //     { code: '', char: 0 }
+      //   ).code;
+
+      // console.log(
+      //   compressedCode
+      //     .split(/|/)
+      //     .reduce((t, x, i) => {
+      //       const code = x.charCodeAt(0);
+      //       return [
+      //         ...t,
+      //         ...range(32).map(n => {
+      //           code >> n;
+      //         })
+      //       ];
+      //     }, [])
+      //     .join('')
+      // );
+
       code = 'function lis(){' + code + '};lis();';
       const content = fs.readFileSync('template.html', 'utf8');
       const bodyI = content.indexOf('</body>');

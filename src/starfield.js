@@ -1,4 +1,5 @@
 import { GameObject } from 'kontra';
+import { range } from './misc';
 class StarField extends GameObject.class {
   constructor(properties) {
     super(properties);
@@ -9,14 +10,14 @@ class StarField extends GameObject.class {
     ctx.fillStyle = '#000';
     ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = '#fff';
-    for (let i = 0; i < ctx.canvas.width * ctx.canvas.height * 0.0001; i++) {
+    range(Math.floor(ctx.canvas.width * ctx.canvas.height * 0.0001)).forEach(i =>
       ctx.fillRect(
         -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
         -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
-      );
-    }
+      )
+    );
   }
 }
 export default StarField;

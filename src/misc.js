@@ -17,3 +17,6 @@ export const seedRand = function(s) {
     return s - Math.floor(s);
   };
 };
+// Test [...Array(to).keys()] compatibility
+// eslint-disable-next-line prefer-spread
+export const range = to => Array.apply(null, Array(to)).map((x, i) => i);

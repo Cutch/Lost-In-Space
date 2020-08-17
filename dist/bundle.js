@@ -110,44 +110,6 @@ function rotatePoint(point, angle) {
 }
 
 /**
- * Create a seeded random number generator.
- *
- * ```js
- * import { seedRand } from 'kontra';
- *
- * let rand = seedRand('kontra');
- * console.log(rand());  // => always 0.33761959057301283
- * ```
- * @see https://stackoverflow.com/a/47593316/2124254
- * @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md
- *
- * @function seedRand
- *
- * @param {String} str - String to seed the random number generator.
- *
- * @returns {() => Number} Seeded random number generator function.
- */
- function seedRand(str) {
-  // based on the above references, this was the smallest code yet decent
-  // quality seed random function
-
-  // first create a suitable hash of the seed string using xfnv1a
-  // @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#addendum-a-seed-generating-functions
-  for(var i = 0, h = 2166136261 >>> 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
-  }
-  h += h << 13; h ^= h >>> 7;
-  h += h << 3;  h ^= h >>> 17;
-  let seed = (h += h << 5) >>> 0;
-
-  // then return the seed function and discard the first result
-  // @see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#lcg-lehmer-rng
-  let rand = () => (2 ** 31 - 1 & (seed = Math.imul(48271, seed))) / 2 ** 31;
-  rand();
-  return rand;
-}
-
-/**
  * Clamp a number between two values, preventing it from going below or above the minimum and maximum values.
  * @function clamp
  *
@@ -1362,6 +1324,29 @@ function keyPressed(key) {
   return !!pressedKeys[key];
 }
 
+const distanceToTarget = (source, target) => Math.sqrt(Math.pow(source.x - target.x, 2) + Math.pow(source.y - target.y, 2));
+const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
+  x > x1 - width / 2 && x < x1 + width / 2 && y > y1 - height / 2 && y < y1 + height / 2;
+
+const distance = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+const angleToTarget = (source, target) => Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
+const text = {
+  fireRateUpdated: 'Fire Rate Upgrade',
+  maxSpeed: 'Speed Upgrade',
+  repair: 'Hull Repaired',
+  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
+  // secondaryWeapon: 'Secondary Weapon Online'
+};
+const seedRand = function(s) {
+  return () => {
+    s = Math.sin(s) * 10000;
+    return s - Math.floor(s);
+  };
+};
+// Test [...Array(to).keys()] compatibility
+// eslint-disable-next-line prefer-spread
+const range = to => Array.apply(null, Array(to)).map((x, i) => i);
+
 class StarField extends factory$2.class {
   constructor(properties) {
     super(properties);
@@ -1372,14 +1357,14 @@ class StarField extends factory$2.class {
     ctx.fillStyle = '#000';
     ctx.fillRect(-this.x, -this.y, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = '#fff';
-    for (let i = 0; i < ctx.canvas.width * ctx.canvas.height * 0.0001; i++) {
+    range(Math.floor(ctx.canvas.width * ctx.canvas.height * 0.0001)).forEach(i =>
       ctx.fillRect(
         -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.width),
         -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % ctx.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
-      );
-    }
+      )
+    );
   }
 }
 /* Twinkle
@@ -1473,20 +1458,6 @@ class Cockpit extends factory$2.class {
     }
   }
 }
-
-const distanceToTarget = (source, target) => Math.sqrt(Math.pow(source.x - target.x, 2) + Math.pow(source.y - target.y, 2));
-const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
-  x > x1 - width / 2 && x < x1 + width / 2 && y > y1 - height / 2 && y < y1 + height / 2;
-
-const distance = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-const angleToTarget = (source, target) => Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
-const text = {
-  fireRateUpdated: 'Fire Rate Upgrade',
-  maxSpeed: 'Speed Upgrade',
-  repair: 'Hull Repaired',
-  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
-  // secondaryWeapon: 'Secondary Weapon Online'
-};
 
 class Bullet extends factory$3.class {
   constructor(properties) {
@@ -1602,11 +1573,6 @@ const getPattern = () => {
   patternCanvas.width = 60;
   patternCanvas.height = 60;
 
-  // Give the pattern a background color
-  // const shipGrad = patternContext.createLinearGradient(0, 0, 60, 0);
-  // shipGrad.addColorStop(0.0, '#fff');
-  // shipGrad.addColorStop(0.5, '#000');
-  // shipGrad.addColorStop(1, '#fff');
   patternContext.fillStyle = '#888';
   patternContext.fillRect(0, 0, 60, 60);
   patternContext.fillStyle = '#444';
@@ -1618,7 +1584,6 @@ const getPattern = () => {
   triangle(patternContext, 30, 5, 20, 40, 40);
   patternContext.fillStyle = '#222';
   triangle(patternContext, 30, 15, 25, 35, 35);
-  // triangle(patternContext, '#222', 60, -30, 50, 30, 40, 30);
   return patternCanvas;
 };
 class Ship extends factory$2.class {
@@ -1688,9 +1653,10 @@ class Ship extends factory$2.class {
       ctx.beginPath();
       const r = Math.random();
       const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
-      for (let i = 0; i <= 12; i++) {
-        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))));
-      }
+      // 0-12 incl 12
+      range(13).forEach(i =>
+        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
+      );
       ctx.fill();
     }
   }
@@ -1737,7 +1703,9 @@ class Ship extends factory$2.class {
         _this.speedY *= _this.maxShipSpeed / speed;
       }
     }
+
     // Rotate on key press
+    // Do a half turn on first key press
     const angle = 0.05 / (this.rotating ? 1 : 2);
     if (keyPressed('a')) {
       _this.rotation = _this.rotation - angle;
@@ -1763,7 +1731,7 @@ class Ship extends factory$2.class {
 }
 
 const accSpeed = 0.1;
-const getPattern$1 = color => {
+const getPattern$1 = (color, seed) => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
 
@@ -1775,8 +1743,8 @@ const getPattern$1 = color => {
   patternContext.fillStyle = color;
   patternContext.fillRect(0, 0, 40, 40);
 
-  const rand = seedRand(1);
-  for (let x = 0, y = 0; x < 40 || y < 40; ) {
+  const rand = seedRand(seed + 1);
+  for (let x = 0, y = 0; y < 40; ) {
     const w = Math.floor(rand() * 7 + 2);
     patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
     patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
@@ -1788,17 +1756,20 @@ const getPattern$1 = color => {
   }
   return patternCanvas;
 };
-const colors = ['#080', '#008', '#800'].map(getPattern$1);
+const typeCount = 15;
+const colors = range(typeCount).reduce((t, x) => [...t, ...['#080', '#008', '#800'].map(color => getPattern$1(color, x))], []);
 class Enemy extends factory$3.class {
   constructor(properties) {
     properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
+    this.type = Math.floor(Math.random() * typeCount) * 3;
+    this.colorList = colors.map(x => this.context.createPattern(x, null));
     this.health++;
     this.minusHealth();
   }
   minusHealth() {
     this.health--;
-    if (this.health > 0) this.color = this.context.createPattern(colors[this.health - 1], null);
+    if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
   }
   update(enemies) {
     const _this = this;

@@ -1,7 +1,7 @@
-import { Sprite, seedRand } from 'kontra';
-import { distanceToTarget, angleToTarget, distance } from './misc';
+import { Sprite } from 'kontra';
+import { distanceToTarget, angleToTarget, distance, range, seedRand } from './misc';
 const accSpeed = 0.1;
-const getPattern = color => {
+const getPattern = (color, seed) => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
 
@@ -13,8 +13,8 @@ const getPattern = color => {
   patternContext.fillStyle = color;
   patternContext.fillRect(0, 0, 40, 40);
 
-  const rand = seedRand(1);
-  for (let x = 0, y = 0; x < 40 || y < 40; ) {
+  const rand = seedRand(seed + 1);
+  for (let x = 0, y = 0; y < 40; ) {
     const w = Math.floor(rand() * 7 + 2);
     patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
     patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
@@ -26,17 +26,20 @@ const getPattern = color => {
   }
   return patternCanvas;
 };
-const colors = ['#080', '#008', '#800'].map(getPattern);
+const typeCount = 15;
+const colors = range(typeCount).reduce((t, x) => [...t, ...['#080', '#008', '#800'].map(color => getPattern(color, x))], []);
 class Enemy extends Sprite.class {
   constructor(properties) {
     properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
+    this.type = Math.floor(Math.random() * typeCount) * 3;
+    this.colorList = colors.map(x => this.context.createPattern(x, null));
     this.health++;
     this.minusHealth();
   }
   minusHealth() {
     this.health--;
-    if (this.health > 0) this.color = this.context.createPattern(colors[this.health - 1], null);
+    if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
   }
   update(enemies) {
     const _this = this;
