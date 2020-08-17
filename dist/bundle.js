@@ -1587,7 +1587,7 @@ if (AudioContext) {
 
 // x,y point path of ship
 const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 60, 45, 60, 60, 57, 60, 45, 40, 30, 37.5, 15];
-const triangle = (ctx, x1, y1, x2, y2, x3, y3) => {
+const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -1610,12 +1610,14 @@ const getPattern = () => {
   patternContext.fillStyle = '#888';
   patternContext.fillRect(0, 0, 60, 60);
   patternContext.fillStyle = '#444';
-  triangle(patternContext, 40, 30, 50, 60, 80, 60);
-  triangle(patternContext, 20, 30, 10, 60, -20, 60);
+  triangle(patternContext, 40, 30, 50, 60, 80);
+  triangle(patternContext, 20, 30, 10, 60, -20);
+  patternContext.fillStyle = '#777';
+  triangle(patternContext, 30, 5, 20, 50, 40);
   patternContext.fillStyle = '#666';
-  triangle(patternContext, 30, 5, 20, 40, 40, 40);
+  triangle(patternContext, 30, 5, 20, 40, 40);
   patternContext.fillStyle = '#222';
-  triangle(patternContext, 30, 15, 25, 35, 35, 35);
+  triangle(patternContext, 30, 15, 25, 35, 35);
   // triangle(patternContext, '#222', 60, -30, 50, 30, 40, 30);
   return patternCanvas;
 };
@@ -1970,8 +1972,9 @@ const initGame = () => {
     'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
     "Me: This may be Corg space, I don't want to get assimil...assinated.",
     'Me: Computer, System Status.',
-    'Computer: All critical have been destroyed.',
+    'Computer: All systems have been destroyed.',
     'Me: Ugh, now I need some scrap to fix the systems.',
+    'Computer: 200t of scrap are needed',
     'Computer: Use my WASD keys to fly and The Bar to shoot.'
   ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };

@@ -95,13 +95,15 @@ function replaceStrings(options = {}) {
         .forEach(replaceDotVars);
       code = `const _t=${JSON.stringify(textDict)};${code}`;
       // Comment in to wrap in function for variable safety
+      code = code.replace(`,ArrowLeft:"left",ArrowUp:"up",ArrowRight:_t.a,ArrowDown:"down"`, '');
       code = 'function lis(){' + code + '};lis();';
-      console.log('Bundle Bytes: ', code.length);
       const content = fs.readFileSync('template.html', 'utf8');
-      const headI = content.indexOf('</body>');
-      if (headI == -1) console.error('Missing head in template.html');
+      const bodyI = content.indexOf('</body>');
+      if (bodyI == -1) console.error('Missing body in template.html');
       else {
-        fs.writeFileSync('index.html', content.slice(0, headI) + `<script>${code}</script>` + content.slice(headI), 'utf8');
+        const html = content.slice(0, bodyI) + `<script>${code}</script>` + content.slice(bodyI);
+        console.log('Bundle Bytes: ', html.length, html.length <= 13312 ? 'Under 13KB' : 'Above 13KB');
+        fs.writeFileSync('index.html', html, 'utf8');
       }
 
       return code;

@@ -51,8 +51,9 @@ const initGame = () => {
     'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
     "Me: This may be Corg space, I don't want to get assimil...assinated.",
     'Me: Computer, System Status.',
-    'Computer: All critical have been destroyed.',
+    'Computer: All systems have been destroyed.',
     'Me: Ugh, now I need some scrap to fix the systems.',
+    'Computer: 200t of scrap are needed',
     'Computer: Use my WASD keys to fly and The Bar to shoot.'
   ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
