@@ -118,7 +118,7 @@ class Ship extends GameObject.class {
     // Update Bullets
     _this.bullets.forEach((b, i) => {
       // Check if bullets have gone too far or hit an enemy, remove if so
-      if (b.tick < tick - 60 || b.hit) _this.bullets.splice(i, 1);
+      if (b.tick < tick - 80 || b.hit) _this.bullets.splice(i, 1);
       else b.update(enemies);
     });
     // Check if it is a new day, day is 10 seconds
