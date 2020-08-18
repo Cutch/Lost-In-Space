@@ -42,7 +42,7 @@ const getPlanetPattern = seed => {
   patternContext.fillRect(0, 0, 300, 300);
 
   const rand = seedRand(seed + 1);
-  for (let i = 0; i < 40; i++) {
+  range(40).forEach(() => {
     patternContext.fillStyle = planetColors[Math.floor(rand() * planetColors.length)];
     const [x, y, ex, ey] = range(8).map(() => Math.floor(rand() * 250 + 50));
     const [r1, r2, r3, r4] = range(8).map(() => Math.floor(rand() * 50 + 10));
@@ -51,7 +51,7 @@ const getPlanetPattern = seed => {
     patternContext.moveTo(ex, ey);
     patternContext.bezierCurveTo(ex - r1, ey - r2, x - r3, y - r4, x, y);
     patternContext.fill();
-  }
+  });
   return patternCanvas;
 };
 const init = context => {

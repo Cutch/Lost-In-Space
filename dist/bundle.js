@@ -1894,7 +1894,7 @@ const getPlanetPattern = seed => {
   patternContext.fillRect(0, 0, 300, 300);
 
   const rand = seedRand(seed + 1);
-  for (let i = 0; i < 40; i++) {
+  range(40).forEach(() => {
     patternContext.fillStyle = planetColors[Math.floor(rand() * planetColors.length)];
     const [x, y, ex, ey] = range(8).map(() => Math.floor(rand() * 250 + 50));
     const [r1, r2, r3, r4] = range(8).map(() => Math.floor(rand() * 50 + 10));
@@ -1903,7 +1903,7 @@ const getPlanetPattern = seed => {
     patternContext.moveTo(ex, ey);
     patternContext.bezierCurveTo(ex - r1, ey - r2, x - r3, y - r4, x, y);
     patternContext.fill();
-  }
+  });
   return patternCanvas;
 };
 const init$1 = context => {
@@ -2085,18 +2085,6 @@ class GameOver extends factory$2.class {
 class Planets extends factory$2.class {
   constructor(props) {
     super(props);
-    // range(100).forEach(x => {
-    //   range(100).forEach(y => {
-    //     const rand = seedRand(x * 10000 + y);
-    //     range(10).forEach(() => {
-    //       const n = rand();
-    //       if (n < 0 || n > 1) {
-    //         console.log(n);
-    //       }
-    //     });
-    //   });
-    // });
-    // console.log('done');
   }
 
   draw() {
@@ -2106,7 +2094,7 @@ class Planets extends factory$2.class {
     context.arc(this.planetX, this.planetY, this.radius, 0, 2 * Math.PI);
     context.fill();
     /**
-     * Create quadrants based on screen width
+     * Testing code, adds quadrant lines
      */
     // const { width, height } = this.context.canvas;
     // const x = (this.x || 0) - width / 2;
@@ -2143,7 +2131,6 @@ class Planets extends factory$2.class {
     // const maxQuadX = Math.floor((1 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
     // const minQuadY = Math.floor((0 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
     // const maxQuadY = Math.floor((1 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // console.log(minQuadX);
     // context.strokeStyle = '#00F';
     // context.beginPath();
     // context.moveTo(minQuadX, -100000);
@@ -2164,9 +2151,6 @@ class Planets extends factory$2.class {
     // context.moveTo(-100000, maxQuadY);
     // context.lineTo(100000, maxQuadY);
     // context.stroke();
-
-    // this.planetX = Math.floor((rand() * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // this.planetY = Math.floor((rand() * quadHeight) / 2 + quadWidth / 4 - quadY * quadHeight);
   }
   update(enemies, ship, tick) {
     super.update();
@@ -2194,8 +2178,9 @@ class Planets extends factory$2.class {
        */
       const rand = seedRand(quadX * 10000 + quadY);
       this.radius = Math.floor(rand() * 60 + 40); // Range 40-100
-      this.planetX = Math.floor((rand() * (quadWidth - this.radius * 2)) / 2 + quadWidth / 4 - quadX * quadWidth + this.radius);
-      this.planetY = Math.floor((rand() * (quadHeight - this.radius * 2)) / 2 + quadWidth / 4 - quadY * quadHeight + this.radius);
+      // Using radius * 4 as planet is 0,0 of planet is top left corner
+      this.planetX = Math.floor((rand() * (quadWidth - this.radius * 4)) / 2 + quadWidth / 4 - quadX * quadWidth + this.radius);
+      this.planetY = Math.floor((rand() * (quadHeight - this.radius * 4)) / 2 + quadHeight / 4 - quadY * quadHeight + this.radius);
     }
     if (this.radius > 0) {
       [...enemies, ship].forEach(ship => {
@@ -2417,7 +2402,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  // if (ship.health <= 0) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();

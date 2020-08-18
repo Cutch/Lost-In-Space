@@ -1,21 +1,9 @@
 import { GameObject } from 'kontra';
-import { seedRand, distanceToTarget, angleToTarget, range } from './misc';
+import { seedRand, distanceToTarget, angleToTarget } from './misc';
 import { planetPatterns } from './textures';
 class Planets extends GameObject.class {
   constructor(props) {
     super(props);
-    // range(100).forEach(x => {
-    //   range(100).forEach(y => {
-    //     const rand = seedRand(x * 10000 + y);
-    //     range(10).forEach(() => {
-    //       const n = rand();
-    //       if (n < 0 || n > 1) {
-    //         console.log(n);
-    //       }
-    //     });
-    //   });
-    // });
-    // console.log('done');
   }
 
   draw() {
@@ -25,7 +13,7 @@ class Planets extends GameObject.class {
     context.arc(this.planetX, this.planetY, this.radius, 0, 2 * Math.PI);
     context.fill();
     /**
-     * Create quadrants based on screen width
+     * Testing code, adds quadrant lines
      */
     // const { width, height } = this.context.canvas;
     // const x = (this.x || 0) - width / 2;
@@ -62,7 +50,6 @@ class Planets extends GameObject.class {
     // const maxQuadX = Math.floor((1 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
     // const minQuadY = Math.floor((0 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
     // const maxQuadY = Math.floor((1 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // console.log(minQuadX);
     // context.strokeStyle = '#00F';
     // context.beginPath();
     // context.moveTo(minQuadX, -100000);
@@ -83,9 +70,6 @@ class Planets extends GameObject.class {
     // context.moveTo(-100000, maxQuadY);
     // context.lineTo(100000, maxQuadY);
     // context.stroke();
-
-    // this.planetX = Math.floor((rand() * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // this.planetY = Math.floor((rand() * quadHeight) / 2 + quadWidth / 4 - quadY * quadHeight);
   }
   update(enemies, ship, tick) {
     super.update();
@@ -113,8 +97,9 @@ class Planets extends GameObject.class {
        */
       const rand = seedRand(quadX * 10000 + quadY);
       this.radius = Math.floor(rand() * 60 + 40); // Range 40-100
-      this.planetX = Math.floor((rand() * (quadWidth - this.radius * 2)) / 2 + quadWidth / 4 - quadX * quadWidth + this.radius);
-      this.planetY = Math.floor((rand() * (quadHeight - this.radius * 2)) / 2 + quadWidth / 4 - quadY * quadHeight + this.radius);
+      // Using radius * 4 as planet is 0,0 of planet is top left corner
+      this.planetX = Math.floor((rand() * (quadWidth - this.radius * 4)) / 2 + quadWidth / 4 - quadX * quadWidth + this.radius);
+      this.planetY = Math.floor((rand() * (quadHeight - this.radius * 4)) / 2 + quadHeight / 4 - quadY * quadHeight + this.radius);
     }
     if (this.radius > 0) {
       [...enemies, ship].forEach(ship => {

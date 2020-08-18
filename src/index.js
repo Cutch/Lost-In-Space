@@ -197,7 +197,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  // if (ship.health <= 0) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();
