@@ -9,7 +9,7 @@ if (AudioContext) {
     const o = ctx.createOscillator();
     o.type = 'square';
     const g = ctx.createGain();
-    g.gain.value = 0.5;
+    g.gain.value = 0.15;
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
     o.frequency.value = 100;
     o.connect(g);

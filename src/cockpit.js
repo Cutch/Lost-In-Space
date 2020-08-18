@@ -16,7 +16,6 @@ class Cockpit extends GameObject.class {
   constructor(props) {
     super(props);
     const _this = this;
-    _this.dayText = new Text(fontProps);
     _this.scrapText = new Text(fontProps);
     _this.healthText = new Text(fontProps);
     _this.skipHelper = new Text({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
@@ -28,7 +27,6 @@ class Cockpit extends GameObject.class {
 
   render() {
     const _this = this;
-    _this.dayText.render();
     _this.scrapText.render();
     _this.healthText.render();
     if (_this.statusText) {
@@ -60,14 +58,11 @@ class Cockpit extends GameObject.class {
     const _this = this;
     const w = _this.context.canvas.width;
     const h = _this.context.canvas.height;
-    _this.dayText.x = w - pad;
-    _this.dayText.y = h - pad - fontSize;
     _this.scrapText.x = w - pad;
-    _this.scrapText.y = h - 45 - pad - fontSize;
+    _this.scrapText.y = h - pad - fontSize;
     _this.healthText.x = w - pad;
-    _this.healthText.y = h - 90 - pad - fontSize;
+    _this.healthText.y = h - 45 - pad - fontSize;
     _this.scrapText.text = `Scrap: ${ship.scrap}t`;
-    _this.dayText.text = `Day: ${ship.day}`;
     _this.healthText.text = `Hull Integrity: ${ship.health}%`;
     if (_this.statusText) {
       _this.statusTextBackground.width = w;

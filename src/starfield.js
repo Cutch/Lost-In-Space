@@ -1,5 +1,5 @@
-import { GameObject, Sprite, angleToTarget } from 'kontra';
-import { range, randomPointOutsideView } from './misc';
+import { GameObject, Sprite } from 'kontra';
+import { range, randomPointOutsideView, angleToTarget } from './misc';
 class StarField extends GameObject.class {
   shootingStars = [];
   constructor(properties) {

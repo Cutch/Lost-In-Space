@@ -88,9 +88,13 @@ function replaceStrings(options = {}) {
        * Generate a list of duplicated text and store them in a json object
        */
       const matches = code.match(/[a-zA-Z]+:"[^"]+"/gm);
-
       const replaceCount = matches
-        .map(x => x.split(':')[1])
+        .map(x =>
+          x
+            .split(':')
+            .slice(1)
+            .join(':')
+        )
         .reduce((t, match) => {
           t[match] = (t[match] || 0) + 1;
           return t;

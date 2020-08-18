@@ -4,8 +4,11 @@ import Cockpit from './cockpit';
 import Ship from './ship';
 import Enemy from './enemy';
 import GameOver from './gameOver';
+import textures from './textures';
 import { randomPointOutsideView } from './misc';
-const { canvas } = init();
+import Planets from './planets';
+const { context, canvas } = init();
+textures(context);
 /**
  * Track the browser window and resize the canvas
  */
@@ -25,6 +28,7 @@ let titleText = new Text({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
+const localStorage = window.localStorage;
 const pauseText = new Text({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
@@ -33,10 +37,12 @@ let gameStart;
 let gameOver;
 let cockpit;
 let starField;
+let planets;
 let ship;
 let enemies;
 let tick;
 let paused;
+let hasWon = localStorage ? localStorage.getItem('lins_won') || false : false;
 /**
  * Initial values for the game start and setup
  */
@@ -45,21 +51,30 @@ const initGame = () => {
   gameOver = null;
   cockpit = new Cockpit();
   starField = new StarField();
-  ship = new Ship(cockpit);
+  ship = new Ship(cockpit, hasWon);
   paused = false;
   tick = 1;
   enemies = [];
-  [
-    'Me: Where am I?',
-    'Computer: Error: 404. Location Not Found.',
-    'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
-    "Me: This may be Corg space, I don't want to get assimil...assinated.",
-    'Me: Computer, System Status.',
-    'Computer: All systems have been destroyed.',
-    'Me: Ugh, now I need some scrap to fix the systems.',
-    'Computer: 200t of scrap are needed',
-    'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-  ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  planets = new Planets();
+  if (hasWon)
+    [
+      "Me: Well let's get some Corg?",
+      'Computer: Error: 404. Corg Not Found.',
+      'Me: What the heck is that then???',
+      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
+    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  else
+    [
+      'Me: Where am I?',
+      'Computer: Error: 404. Location Not Found.',
+      'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
+      "Me: This may be Corg space, I don't want to get assimil...assinated.",
+      'Me: Computer, System Status.',
+      'Computer: All systems have been destroyed.',
+      'Me: Ugh, now I need some scrap to fix the systems.',
+      'Computer: 200t of scrap are needed',
+      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
+    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
 
@@ -77,8 +92,25 @@ const mainGameLoop = () => {
       paused = !paused;
     }
   } else escapeKeyUp = true;
+  cockpit.update(ship);
   // Block main game loop on pause
   if (paused) return;
+  tick++;
+  ship.update(enemies, planets, tick);
+  // Move the background based on the ship's speed
+  starField.dx = ship.speedX;
+  starField.dy = ship.speedY;
+  starField.update(tick);
+
+  planets.dx = ship.speedX;
+  planets.dy = ship.speedY;
+  planets.update(enemies, ship, tick);
+
+  enemies.forEach(e => {
+    e.dx = ship.speedX;
+    e.dy = ship.speedY;
+    e.update(enemies, planets);
+  });
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
     const [x, y] = randomPointOutsideView(canvas);
@@ -97,22 +129,11 @@ const mainGameLoop = () => {
       })
     );
   }
-  tick++;
-  ship.update(enemies, tick);
-  cockpit.update(ship);
-  // Move the background based on the ship's speed
-  starField.dx = ship.speedX;
-  starField.dy = ship.speedY;
-  starField.update(tick);
-  enemies.forEach(e => {
-    e.dx = ship.speedX;
-    e.dy = ship.speedY;
-    e.update(enemies);
-  });
   // Win Condition
-  if (ship.scrap === 200) {
+  if (ship.hasWarp === 200) {
     setTimeout(() => {
       enemies = [];
+      hasWon = true; // In case there is no local storage write it for this session
       gameOver = new GameOver(ship, true);
     }, 3000);
   }
@@ -122,6 +143,7 @@ const mainGameLoop = () => {
  */
 const mainGameRender = () => {
   starField.render();
+  planets.render();
   enemies.forEach(e => e.render());
   ship.render();
   cockpit.render();

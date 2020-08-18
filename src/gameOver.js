@@ -3,42 +3,49 @@ import { engineSoundOff } from './sound';
 const pad = 20;
 const fontSize = 36;
 const font = `${fontSize}px Arial`;
-const smallFont = `24px Arial`;
+const smallFont = `20px Arial`;
 const color = '#fff';
 const textAlign = 'center';
 const addS = n => (n !== 1 ? 's' : '');
+const localStorage = window.localStorage;
+
 class GameOver extends GameObject.class {
   gameWin = false;
   constructor(ship, gameWin) {
     super();
     engineSoundOff();
     const _this = this;
-    _this.background = new Sprite({ width: 600, height: 400, color: '#600A' });
+    _this.background = new Sprite({ width: 650, height: 400, color: '#600A' });
     _this.winText = new Text({ font: smallFont, color, text: "Me: These are the coordinates, where's Earth?", textAlign });
     _this.winText2 = new Text({ font: smallFont, color, text: 'Computer: Error: 404. Earth not found.', textAlign });
+    _this.winText3 = new Text({
+      font: smallFont,
+      color,
+      text: 'Me: Okay... Well I might as well see how many Corg I can destroy',
+      textAlign
+    });
     _this.gameOverText = new Text({ font, color, text: 'Game Over', textAlign });
     _this.highScoreText = new Text({ font, color, text: `Score: ${ship.scrap}`, textAlign });
-    const localStorage = window.localStorage;
+    let hasWon = false;
     if (localStorage) {
       const maxScore = Math.max(localStorage.getItem('lins_score') || 0, ship.scrap);
-      const maxDay = localStorage.getItem('lins_day') || 0;
-      const maxDayO = ship.scrap >= 200 ? Math.min(maxDay, ship.day) : maxDay;
+      hasWon = localStorage.getItem('lins_won') || false;
       localStorage.setItem('lins_score', maxScore);
-      localStorage.setItem('lins_day', maxDay);
+      localStorage.setItem('lins_won', hasWon || gameWin);
       _this.maxScoreText = new Text({
         font: `18px Arial`,
         color,
-        text: `High Score: ${maxDayO} day${addS(maxDayO)}, ${maxScore} scrap`,
+        text: `High Score: ${maxScore} scrap`,
         textAlign
       });
     }
     _this.dayText = new Text({
       font,
       color,
-      text: `${gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
+      text: `${!hasWon && gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
       textAlign
     });
-    _this.playAgainText = new Text({ font, color, text: 'Play Again? Press Enter', textAlign });
+    _this.playAgainText = new Text({ font, color, text: 'Endless Destruction? Press Enter', textAlign });
     _this.gameWin = gameWin;
   }
 
@@ -48,6 +55,7 @@ class GameOver extends GameObject.class {
     if (_this.gameWin) {
       _this.winText.render();
       _this.winText2.render();
+      this.winText3.render();
     } else _this.gameOverText.render();
 
     _this.highScoreText.render();
@@ -62,9 +70,11 @@ class GameOver extends GameObject.class {
     _this.background.x = cw - _this.background.width / 2;
     _this.background.y = ch - _this.background.height / 2;
     _this.winText.x = cw;
-    _this.winText.y = ch - (24 + pad) * 3;
+    _this.winText.y = ch - (20 + pad) * 4;
     _this.winText2.x = cw;
-    _this.winText2.y = ch - (32 + pad) * 2;
+    _this.winText2.y = ch - (24 + pad) * 3;
+    _this.winText3.x = cw;
+    _this.winText3.y = ch - (32 + pad) * 2;
     _this.gameOverText.x = cw;
     _this.gameOverText.y = ch - (fontSize + pad) * 2;
     _this.highScoreText.x = cw;

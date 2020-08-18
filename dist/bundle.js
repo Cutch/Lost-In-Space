@@ -92,48 +92,6 @@ function init(canvas) {
 const noop = () => {};
 
 /**
- * Return the angle in radians from one point to another point.
- *
- * ```js
- * import { angleToTarget, Sprite } from 'kontra';
- *
- * let sprite = Sprite({
- *   x: 10,
- *   y: 10,
- *   width: 20,
- *   height: 40,
- *   color: 'blue'
- * });
- *
- * sprite.rotation = angleToTarget(sprite, {x: 100, y: 30});
- *
- * let sprite2 = Sprite({
- *   x: 100,
- *   y: 30,
- *   width: 20,
- *   height: 40,
- *   color: 'red',
- * });
- *
- * sprite2.rotation = angleToTarget(sprite2, sprite);
- * ```
- * @function angleToTarget
- *
- * @param {{x: Number, y: Number}} source - The source point.
- * @param {{x: Number, y: Number}} target - The target point.
- *
- * @returns {Number} Angle (in radians) from the source point to the target point.
- */
-function angleToTarget(source, target) {
-
-  // atan2 returns the counter-clockwise angle in respect to the x-axis, but
-  // the canvas rotation system is based on the y-axis (rotation of 0 = up).
-  // so we need to add a quarter rotation to return a counter-clockwise
-  // rotation in respect to the y-axis
-  return Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
-}
-
-/**
  * Rotate a point by an angle.
  * @function rotatePoint
  *
@@ -1370,14 +1328,25 @@ const distanceToTarget = (source, target) => Math.sqrt(Math.pow(source.x - targe
 const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
   x > x1 - width / 2 && x < x1 + width / 2 && y > y1 - height / 2 && y < y1 + height / 2;
 
-const distance = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-const angleToTarget$1 = (source, target) => Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2;
+const magnitude = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
+const angleToTarget = (source, target) => (Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2) % (Math.PI * 2);
+
+// export const normalize = vec => {
+//   const mag = magnitude(vec.x, vec.y);
+//   vec.x /= mag;
+//   vec.y /= mag;
+//   return vec;
+// };
+// export const dotProduct = (a, b) => a.x * b.x + a.y * b.y;
 const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
+  secondaryFireRateUpdated: 'Secondary Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
   repair: 'Hull Repaired',
-  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...'
-  // secondaryWeapon: 'Secondary Weapon Online'
+  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...',
+  secondaryWeapons: 'Secondary Weapons Online',
+  acceleration: 'Acceleration Increased',
+  rotationSpeed: 'Rotor Speed Increased'
 };
 const seedRand = function(s) {
   return () => {
@@ -1397,8 +1366,8 @@ const randomPointOutsideView = ({ width, height }) => {
   const spawn = [Math.random() * 1.5, Math.random() - 0.5];
   spawn[1] = Math.sign(spawn[1]) + spawn[1];
   if (Math.random() > 0.5) spawn.reverse();
-  spawn[0] *= width;
-  spawn[1] *= height;
+  spawn[0] = Math.floor(spawn[0] * width);
+  spawn[1] = Math.floor(spawn[1] * height);
   return spawn;
 };
 
@@ -1482,7 +1451,6 @@ class Cockpit extends factory$2.class {
   constructor(props) {
     super(props);
     const _this = this;
-    _this.dayText = new factory$4(fontProps);
     _this.scrapText = new factory$4(fontProps);
     _this.healthText = new factory$4(fontProps);
     _this.skipHelper = new factory$4({ font: `12px Arial`, color, text: 'Press SPACE to skip' });
@@ -1494,7 +1462,6 @@ class Cockpit extends factory$2.class {
 
   render() {
     const _this = this;
-    _this.dayText.render();
     _this.scrapText.render();
     _this.healthText.render();
     if (_this.statusText) {
@@ -1526,14 +1493,11 @@ class Cockpit extends factory$2.class {
     const _this = this;
     const w = _this.context.canvas.width;
     const h = _this.context.canvas.height;
-    _this.dayText.x = w - pad;
-    _this.dayText.y = h - pad - fontSize;
     _this.scrapText.x = w - pad;
-    _this.scrapText.y = h - 45 - pad - fontSize;
+    _this.scrapText.y = h - pad - fontSize;
     _this.healthText.x = w - pad;
-    _this.healthText.y = h - 90 - pad - fontSize;
+    _this.healthText.y = h - 45 - pad - fontSize;
     _this.scrapText.text = `Scrap: ${ship.scrap}t`;
-    _this.dayText.text = `Day: ${ship.day}`;
     _this.healthText.text = `Hull Integrity: ${ship.health}%`;
     if (_this.statusText) {
       _this.statusTextBackground.width = w;
@@ -1553,7 +1517,7 @@ class Bullet extends factory$3.class {
     properties = { ...properties, width: 2, height: 10, color: '#abab46', hit: false };
     super(properties);
   }
-  update(enemies) {
+  update(enemies, planets) {
     super.update();
     /**
      * Check if the bullet has hit any enemies
@@ -1565,6 +1529,10 @@ class Bullet extends factory$3.class {
         hitEnemy.minusHealth();
         if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
+    /**
+     * Check for bullet planet collision
+     */
+    if (distanceToTarget({ x: planets.planetX + planets.x, y: planets.planetY + planets.y }, this) <= planets.radius) this.hit = true;
   }
 }
 
@@ -1579,7 +1547,7 @@ if (AudioContext) {
     const o = ctx.createOscillator();
     o.type = 'square';
     const g = ctx.createGain();
-    g.gain.value = 0.5;
+    g.gain.value = 0.15;
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
     o.frequency.value = 100;
     o.connect(g);
@@ -1680,18 +1648,23 @@ const getPattern = () => {
   return patternCanvas;
 };
 class Ship extends factory$2.class {
-  maxShipSpeed = 4;
-  hasWarp = false;
+  acceleration = 0.05; // acceleration of the ship
+  rotationAcceleration = 0.05; // Rotation speed of the ship
+  maxSpeed = 4; // Max Speed of the ship
+  hasWarp = false; // Used for first play through for the win condition
   showExhaust = false; // Engine is firing
   bullets = []; // Active bullets
   fireRate = 20; // Bullet fire interval, every x ticks
-  lastFire = -20; // Initial value is negative of fire rate
+  lastFire = -99; // Initial value is negative of fire rate
+  secondaryWeapons = false;
+  secondaryFireRate = 15; // Bullet fire interval, every x ticks
+  lastSecondaryFire = -99;
   level = 1; // Ship's level
   engineLevel = 1; // Ship's level
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
   rotating = false;
-  constructor(cockpit) {
+  constructor(cockpit, hasWon) {
     super({
       width: 60,
       height: 60,
@@ -1710,16 +1683,26 @@ class Ship extends factory$2.class {
     // Ship texture
     _this.color = this.context.createPattern(getPattern(), 'repeat');
 
+    // Set a list of upgrades and what they do
     _this.upgrades = [
       [20, () => (_this.fireRate = 15), text.fireRateUpdated],
-      [40, () => ((_this.maxShipSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
+      [40, () => ((_this.maxSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
       [60, () => (_this.fireRate = 10), text.fireRateUpdated],
-      [80, () => ((_this.maxShipSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
-      [100, () => (_this.health = Math.min(100, _this.health + 50)), text.repair],
+      [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
-      [140, () => ((_this.maxShipSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
-      [200, () => (_this.hasWarp = true), text.warpDrive]
+      [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
+      [300, () => (_this.acceleration = 0.08), text.acceleration],
+      [350, () => (_this.fireRate = 4), text.fireRateUpdated],
+      [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
+      [450, () => (_this.fireRate = 3), text.fireRateUpdated],
+      [500, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
+      [550, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
+      [650, () => (_this.fireRate = 2), text.fireRateUpdated],
+      [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
     ];
+    // If already won dont add the win condition
+    if (!hasWon) _this.upgrades.push([200, () => (_this.hasWarp = true), text.warpDrive]);
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -1730,6 +1713,15 @@ class Ship extends factory$2.class {
           cockpit.addStatus(text);
         }
       });
+      /**
+       * Heal ship every 100 scrap
+       * Or every 50 after 600 scrap
+       */
+      if (_this.scrap % 100 === 0) {
+        _this.level++;
+        _this.health = Math.min(100, _this.health + 50);
+        cockpit.addStatus(text.repair);
+      }
     });
   }
   draw() {
@@ -1745,7 +1737,7 @@ class Ship extends factory$2.class {
       ctx.fillStyle = _this.fireGrad;
       ctx.beginPath();
       const r = Math.random();
-      const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
+      const multiplier = Math.floor(Math.pow(_this.maxSpeed / 2, 2) * 2);
       // 0-12 incl 12
       range(13).forEach(i =>
         ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
@@ -1757,13 +1749,13 @@ class Ship extends factory$2.class {
     super.render();
     this.bullets.forEach(b => b.render());
   }
-  update(enemies, tick) {
+  update(enemies, planets, tick) {
     const _this = this;
     // Update Bullets
     _this.bullets.forEach((b, i) => {
       // Check if bullets have gone too far or hit an enemy, remove if so
       if (b.tick < tick - 80 || b.hit) _this.bullets.splice(i, 1);
-      else b.update(enemies);
+      else b.update(enemies, planets);
     });
     // Check if it is a new day, day is 10 seconds
     _this.day = Math.floor(tick / 600);
@@ -1780,42 +1772,78 @@ class Ship extends factory$2.class {
     _this.showExhaust = keyPressed('w');
     if (_this.showExhaust && !prevShowExhaust) engineSoundOn(_this.engineLevel);
     else if (!_this.showExhaust && prevShowExhaust) engineSoundOff();
-    if (keyPressed('space') && tick - _this.lastFire >= _this.fireRate) {
-      fireSound();
-      _this.lastFire = tick;
-      _this.fire(tick);
+    if (keyPressed('space')) {
+      let fired = false;
+      if (tick - _this.lastFire >= _this.fireRate) {
+        fired = true;
+        _this.lastFire = tick;
+        _this.fire(tick);
+      }
+      if (_this.secondaryWeapons && tick - _this.lastSecondaryFire >= _this.secondaryFireRate) {
+        fired = true;
+        _this.lastSecondaryFire = tick;
+        _this.secondaryFire(tick);
+      }
+      if (fired) fireSound();
     }
     // Update the ship's speed on key press
     if (keyPressed('w')) {
-      _this.speedX += -Math.sin(_this.rotation) * 0.05;
-      _this.speedY += Math.cos(_this.rotation) * 0.05;
-      const speed = distance(_this.speedX, _this.speedY);
+      _this.speedX += -Math.sin(_this.rotation) * _this.acceleration;
+      _this.speedY += Math.cos(_this.rotation) * _this.acceleration;
+      const speed = magnitude(_this.speedX, _this.speedY);
       // Ensure ship does not go over current max speed
-      if (speed > _this.maxShipSpeed) {
-        _this.speedX *= _this.maxShipSpeed / speed;
-        _this.speedY *= _this.maxShipSpeed / speed;
+      if (speed > _this.maxSpeed) {
+        _this.speedX *= _this.maxSpeed / speed;
+        _this.speedY *= _this.maxSpeed / speed;
       }
     }
 
     // Rotate on key press
     // Do a half turn on first key press
-    const angle = 0.05 / (this.rotating ? 1 : 2);
+    const angle = _this.rotationAcceleration / (_this.rotating ? 1 : 2);
     if (keyPressed('a')) {
       _this.rotation = _this.rotation - angle;
-      this.rotating = true;
+      _this.rotating = true;
     } else if (keyPressed('d')) {
       _this.rotation = _this.rotation + angle;
-      this.rotating = true;
+      _this.rotating = true;
     } else this.rotating = false;
   }
   fire(tick) {
     const _this = this;
+    const sin = Math.sin(_this.rotation);
+    const cos = Math.cos(_this.rotation);
     _this.bullets.push(
       new Bullet({
-        dx: Math.sin(_this.rotation) * 10,
-        dy: -Math.cos(_this.rotation) * 10,
-        x: _this.x + Math.sin(_this.rotation) * 40,
-        y: _this.y - Math.cos(_this.rotation) * 40,
+        dx: sin * 10,
+        dy: -cos * 10,
+        x: _this.x + sin * 40,
+        y: _this.y - cos * 40,
+        rotation: _this.rotation,
+        tick
+      })
+    );
+  }
+  secondaryFire(tick) {
+    const _this = this;
+    const sin = Math.sin(_this.rotation);
+    const cos = Math.cos(_this.rotation);
+    _this.bullets.push(
+      new Bullet({
+        dx: sin * 15,
+        dy: -cos * 15,
+        x: _this.x + sin * -5 - cos * 30,
+        y: _this.y - cos * -5 - sin * 30,
+        rotation: _this.rotation,
+        tick
+      })
+    );
+    _this.bullets.push(
+      new Bullet({
+        dx: sin * 15,
+        dy: -cos * 15,
+        x: _this.x + sin * -5 + cos * 30,
+        y: _this.y - cos * -5 + sin * 30,
         rotation: _this.rotation,
         tick
       })
@@ -1823,8 +1851,11 @@ class Ship extends factory$2.class {
   }
 }
 
-const accSpeed = 0.1;
-const getPattern$1 = (color, seed) => {
+const enemyTypes = 15;
+const enemyPatterns = [];
+const planetTypes = 50;
+const planetPatterns = [];
+const getEnemyPattern = (color, seed) => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
 
@@ -1849,32 +1880,83 @@ const getPattern$1 = (color, seed) => {
   }
   return patternCanvas;
 };
-const typeCount = 15;
-const colors = range(typeCount).reduce((t, x) => [...t, ...['#080', '#008', '#800'].map(color => getPattern$1(color, x))], []);
+const planetColors = ['#01b7e7', '#ffb141', '#cdccca', '#8db9de', '#f54c23', '#ffb22b', '#ca5c3b', '#99ecfc', '#b7b6b4'];
+const getPlanetPattern = seed => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+
+  // Give the pattern a width and height of 50
+  patternCanvas.width = 300;
+  patternCanvas.height = 300;
+
+  // Give the pattern a background color
+  patternContext.fillStyle = '#b7b6b4';
+  patternContext.fillRect(0, 0, 300, 300);
+
+  const rand = seedRand(seed + 1);
+  for (let i = 0; i < 40; i++) {
+    patternContext.fillStyle = planetColors[Math.floor(rand() * planetColors.length)];
+    const [x, y, ex, ey] = range(8).map(() => Math.floor(rand() * 250 + 50));
+    const [r1, r2, r3, r4] = range(8).map(() => Math.floor(rand() * 50 + 10));
+    patternContext.moveTo(x, y);
+    patternContext.bezierCurveTo(x + r1, y + r2, ex + r3, ey + r4, ex, ey);
+    patternContext.moveTo(ex, ey);
+    patternContext.bezierCurveTo(ex - r1, ey - r2, x - r3, y - r4, x, y);
+    patternContext.fill();
+  }
+  return patternCanvas;
+};
+const init$1 = context => {
+  range(enemyTypes)
+    .reduce((t, x) => [...t, ...['#080', '#00f', '#d00'].map(color => getEnemyPattern(color, x))], [])
+    .map(x => context.createPattern(x, null))
+    .forEach(x => enemyPatterns.push(x));
+  range(planetTypes)
+    .map(x => getPlanetPattern(x))
+    .map(x => context.createPattern(x, null))
+    .forEach(x => planetPatterns.push(x));
+};
+
+const accSpeed = 0.1;
 class Enemy extends factory$3.class {
   constructor(properties) {
     properties = { ...properties, width: 40, height: 40, speedX: 0, speedY: 0, anchor: { x: 0.5, y: 0.5 } };
     super(properties);
-    this.type = Math.floor(Math.random() * typeCount) * 3;
-    this.colorList = colors.map(x => this.context.createPattern(x, null));
+    this.type = Math.floor((Math.random() * enemyPatterns.length) / 3) * 3;
+    this.colorList = enemyPatterns;
     this.health++;
     this.minusHealth();
   }
+  // draw() {
+  //   const { context } = this;
+  //   context.fillStyle = this.color;
+  //   for (let i = 0; i < this.width / 2; i++) context.fillRect(i, i / 2, this.width, this.height);
+  // }
   minusHealth() {
     this.health--;
     if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
   }
-  update(enemies) {
+  update(enemies, planets) {
     const _this = this;
     /**
      * Find the closest other enemy
      */
+    const planetXY = { x: planets.planetX + planets.x, y: planets.planetY + planets.y, radius: planets.radius };
+    let planetAvoidance;
+    if (planetXY.radius > 0) {
+      const dist = distanceToTarget(_this, planetXY) - planetXY.radius;
+      const angle = angleToTarget(_this, planetXY) + 110;
+      planetAvoidance = {
+        angle,
+        dist
+      };
+    }
     const avoidEnemies = enemies.reduce(
       (a, e) => {
         if (e !== _this) {
           const dist = distanceToTarget(_this, e);
           if (dist < a.dist) {
-            const angle = angleToTarget$1(_this, e) + 180;
+            const angle = angleToTarget(_this, e) + 180;
             return {
               angle,
               dist
@@ -1888,11 +1970,12 @@ class Enemy extends factory$3.class {
     /**
      * Find the path to the players ship
      */
-    let angle = angleToTarget$1(_this, _this.ship);
-    if (avoidEnemies.dist !== 100) angle = avoidEnemies.angle + angle / 2;
+    let angle = angleToTarget(_this, _this.ship);
+    if (planetAvoidance && planetAvoidance.dist < 100) angle = (planetAvoidance.angle + angle) / 2;
+    else if (avoidEnemies.dist < 100) angle = (avoidEnemies.angle + angle) / 2;
     _this.speedX -= Math.sin(angle) * accSpeed;
     _this.speedY += Math.cos(angle) * accSpeed;
-    const speed = distance(_this.speedX, _this.speedY);
+    const speed = magnitude(_this.speedX, _this.speedY);
     /**
      * Max Speed starts at 5, works up to 10 over 40 days
      */
@@ -1912,42 +1995,49 @@ class Enemy extends factory$3.class {
 const pad$1 = 20;
 const fontSize$1 = 36;
 const font$1 = `${fontSize$1}px Arial`;
-const smallFont = `24px Arial`;
+const smallFont = `20px Arial`;
 const color$1 = '#fff';
 const textAlign$1 = 'center';
 const addS = n => (n !== 1 ? 's' : '');
+const localStorage = window.localStorage;
+
 class GameOver extends factory$2.class {
   gameWin = false;
   constructor(ship, gameWin) {
     super();
     engineSoundOff();
     const _this = this;
-    _this.background = new factory$3({ width: 600, height: 400, color: '#600A' });
+    _this.background = new factory$3({ width: 650, height: 400, color: '#600A' });
     _this.winText = new factory$4({ font: smallFont, color: color$1, text: "Me: These are the coordinates, where's Earth?", textAlign: textAlign$1 });
     _this.winText2 = new factory$4({ font: smallFont, color: color$1, text: 'Computer: Error: 404. Earth not found.', textAlign: textAlign$1 });
+    _this.winText3 = new factory$4({
+      font: smallFont,
+      color: color$1,
+      text: 'Me: Okay... Well I might as well see how many Corg I can destroy',
+      textAlign: textAlign$1
+    });
     _this.gameOverText = new factory$4({ font: font$1, color: color$1, text: 'Game Over', textAlign: textAlign$1 });
     _this.highScoreText = new factory$4({ font: font$1, color: color$1, text: `Score: ${ship.scrap}`, textAlign: textAlign$1 });
-    const localStorage = window.localStorage;
+    let hasWon = false;
     if (localStorage) {
       const maxScore = Math.max(localStorage.getItem('lins_score') || 0, ship.scrap);
-      const maxDay = localStorage.getItem('lins_day') || 0;
-      const maxDayO = ship.scrap >= 200 ? Math.min(maxDay, ship.day) : maxDay;
+      hasWon = localStorage.getItem('lins_won') || false;
       localStorage.setItem('lins_score', maxScore);
-      localStorage.setItem('lins_day', maxDay);
+      localStorage.setItem('lins_won', hasWon || gameWin);
       _this.maxScoreText = new factory$4({
         font: `18px Arial`,
         color: color$1,
-        text: `High Score: ${maxDayO} day${addS(maxDayO)}, ${maxScore} scrap`,
+        text: `High Score: ${maxScore} scrap`,
         textAlign: textAlign$1
       });
     }
     _this.dayText = new factory$4({
       font: font$1,
       color: color$1,
-      text: `${gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
+      text: `${!hasWon && gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
       textAlign: textAlign$1
     });
-    _this.playAgainText = new factory$4({ font: font$1, color: color$1, text: 'Play Again? Press Enter', textAlign: textAlign$1 });
+    _this.playAgainText = new factory$4({ font: font$1, color: color$1, text: 'Endless Destruction? Press Enter', textAlign: textAlign$1 });
     _this.gameWin = gameWin;
   }
 
@@ -1957,6 +2047,7 @@ class GameOver extends factory$2.class {
     if (_this.gameWin) {
       _this.winText.render();
       _this.winText2.render();
+      this.winText3.render();
     } else _this.gameOverText.render();
 
     _this.highScoreText.render();
@@ -1971,9 +2062,11 @@ class GameOver extends factory$2.class {
     _this.background.x = cw - _this.background.width / 2;
     _this.background.y = ch - _this.background.height / 2;
     _this.winText.x = cw;
-    _this.winText.y = ch - (24 + pad$1) * 3;
+    _this.winText.y = ch - (20 + pad$1) * 4;
     _this.winText2.x = cw;
-    _this.winText2.y = ch - (32 + pad$1) * 2;
+    _this.winText2.y = ch - (24 + pad$1) * 3;
+    _this.winText3.x = cw;
+    _this.winText3.y = ch - (32 + pad$1) * 2;
     _this.gameOverText.x = cw;
     _this.gameOverText.y = ch - (fontSize$1 + pad$1) * 2;
     _this.highScoreText.x = cw;
@@ -1989,7 +2082,153 @@ class GameOver extends factory$2.class {
   }
 }
 
-const { canvas } = init();
+class Planets extends factory$2.class {
+  constructor(props) {
+    super(props);
+    // range(100).forEach(x => {
+    //   range(100).forEach(y => {
+    //     const rand = seedRand(x * 10000 + y);
+    //     range(10).forEach(() => {
+    //       const n = rand();
+    //       if (n < 0 || n > 1) {
+    //         console.log(n);
+    //       }
+    //     });
+    //   });
+    // });
+    // console.log('done');
+  }
+
+  draw() {
+    const { context } = this;
+    context.fillStyle = planetPatterns[Math.pow(this.quadX * 10 + this.quadY, 2) % planetPatterns.length];
+    context.beginPath();
+    context.arc(this.planetX, this.planetY, this.radius, 0, 2 * Math.PI);
+    context.fill();
+    /**
+     * Create quadrants based on screen width
+     */
+    // const { width, height } = this.context.canvas;
+    // const x = (this.x || 0) - width / 2;
+    // const y = (this.y || 0) - height / 2;
+    // const quadWidth = width * 2; // Minimum * 2 so that it appears off screen
+    // const quadHeight = height * 2;
+    // const quadX = Math.floor(x / quadWidth) + 1;
+    // const quadY = Math.floor(y / quadHeight) + 1;
+
+    // context.strokeStyle = '#F00';
+    // context.lineWidth = 5;
+    // context.beginPath();
+    // context.moveTo(Math.abs(quadX - 1) * quadWidth, -100000);
+    // context.lineTo(Math.abs(quadX - 1) * quadWidth, 100000);
+    // context.stroke();
+    // context.strokeStyle = '#0F0';
+    // context.beginPath();
+    // context.moveTo(Math.abs(quadX) * quadWidth, -100000);
+    // context.lineTo(Math.abs(quadX) * quadWidth, 100000);
+    // context.stroke();
+
+    // context.strokeStyle = '#F00';
+    // context.beginPath();
+    // context.moveTo(-100000, Math.abs(quadY - 1) * quadHeight);
+    // context.lineTo(100000, Math.abs(quadY - 1) * quadHeight);
+    // context.stroke();
+    // context.strokeStyle = '#0F0';
+    // context.beginPath();
+    // context.moveTo(-100000, Math.abs(quadY) * quadHeight);
+    // context.lineTo(100000, Math.abs(quadY) * quadHeight);
+    // context.stroke();
+
+    // const minQuadX = Math.floor((0 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
+    // const maxQuadX = Math.floor((1 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
+    // const minQuadY = Math.floor((0 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
+    // const maxQuadY = Math.floor((1 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
+    // console.log(minQuadX);
+    // context.strokeStyle = '#00F';
+    // context.beginPath();
+    // context.moveTo(minQuadX, -100000);
+    // context.lineTo(minQuadX, 100000);
+    // context.stroke();
+
+    // context.beginPath();
+    // context.moveTo(maxQuadX, -100000);
+    // context.lineTo(maxQuadX, 100000);
+    // context.stroke();
+
+    // context.beginPath();
+    // context.moveTo(-100000, minQuadY);
+    // context.lineTo(100000, minQuadY);
+    // context.stroke();
+
+    // context.beginPath();
+    // context.moveTo(-100000, maxQuadY);
+    // context.lineTo(100000, maxQuadY);
+    // context.stroke();
+
+    // this.planetX = Math.floor((rand() * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
+    // this.planetY = Math.floor((rand() * quadHeight) / 2 + quadWidth / 4 - quadY * quadHeight);
+  }
+  update(enemies, ship, tick) {
+    super.update();
+    const { width, height } = this.context.canvas;
+    const x = (this.x || 0) - width / 2;
+    const y = (this.y || 0) - height / 2;
+    /**
+     * Create quadrants based on screen width
+     */
+    const quadWidth = width * 2; // Minimum * 2 so that it appears off screen
+    const quadHeight = height * 2;
+    const quadX = Math.floor(x / quadWidth) + 1;
+    const quadY = Math.floor(y / quadHeight) + 1;
+    this.quadX = quadX;
+    this.quadY = quadY;
+    if (quadX === 0 && quadY === 0) {
+      // No planet in the first quadrant
+      this.radius = 0;
+      // this.planetX = 200;
+      // this.planetY = ship.y - this.y;
+      // this.radius = 1 * 60 + 40;
+    } else {
+      /**
+       * Randomly place a planet in the center of a quadrant outside of the screen
+       */
+      const rand = seedRand(quadX * 10000 + quadY);
+      this.radius = Math.floor(rand() * 60 + 40); // Range 40-100
+      this.planetX = Math.floor((rand() * (quadWidth - this.radius * 2)) / 2 + quadWidth / 4 - quadX * quadWidth + this.radius);
+      this.planetY = Math.floor((rand() * (quadHeight - this.radius * 2)) / 2 + quadWidth / 4 - quadY * quadHeight + this.radius);
+    }
+    if (this.radius > 0) {
+      [...enemies, ship].forEach(ship => {
+        const planetXY = { x: this.planetX, y: this.planetY };
+        const shipXY = { x: ship.x - this.x, y: ship.y - this.y };
+        const dist = distanceToTarget(shipXY, planetXY);
+
+        if (dist <= this.radius + 30) {
+          /**
+           * Check for simple radius based collisions
+           */
+          const collision = { x: (shipXY.x - planetXY.x) / dist, y: (shipXY.y - planetXY.y) / dist };
+          const velocity = { x: -ship.speedX, y: ship.speedY };
+          const speed = -velocity.x * collision.x + velocity.y * collision.y;
+          if (speed > 0) {
+            ship.speedX = -speed * collision.x * 0.8;
+            ship.speedY = -speed * collision.y * 0.8;
+          }
+        } else if (dist < this.radius * 6) {
+          /**
+           * If in sphere of influence apply gravity
+           */
+          const angle = angleToTarget(shipXY, planetXY);
+          ship.speedX += ((-Math.sin(angle) / 50) * dist) / 200;
+          ship.speedY += ((Math.cos(angle) / 50) * dist) / 200;
+        }
+      });
+    }
+  }
+}
+
+const { context: context$1, canvas } = init();
+init$1(context$1);
 /**
  * Track the browser window and resize the canvas
  */
@@ -2009,6 +2248,7 @@ let titleText = new factory$4({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
+const localStorage$1 = window.localStorage;
 const pauseText = new factory$4({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
@@ -2017,10 +2257,12 @@ let gameStart;
 let gameOver;
 let cockpit;
 let starField;
+let planets;
 let ship;
 let enemies;
 let tick;
 let paused;
+let hasWon = localStorage$1 ? localStorage$1.getItem('lins_won') || false : false;
 /**
  * Initial values for the game start and setup
  */
@@ -2029,21 +2271,30 @@ const initGame = () => {
   gameOver = null;
   cockpit = new Cockpit();
   starField = new StarField();
-  ship = new Ship(cockpit);
+  ship = new Ship(cockpit, hasWon);
   paused = false;
   tick = 1;
   enemies = [];
-  [
-    'Me: Where am I?',
-    'Computer: Error: 404. Location Not Found.',
-    'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
-    "Me: This may be Corg space, I don't want to get assimil...assinated.",
-    'Me: Computer, System Status.',
-    'Computer: All systems have been destroyed.',
-    'Me: Ugh, now I need some scrap to fix the systems.',
-    'Computer: 200t of scrap are needed',
-    'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-  ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  planets = new Planets();
+  if (hasWon)
+    [
+      "Me: Well let's get some Corg?",
+      'Computer: Error: 404. Corg Not Found.',
+      'Me: What the heck is that then???',
+      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
+    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  else
+    [
+      'Me: Where am I?',
+      'Computer: Error: 404. Location Not Found.',
+      'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
+      "Me: This may be Corg space, I don't want to get assimil...assinated.",
+      'Me: Computer, System Status.',
+      'Computer: All systems have been destroyed.',
+      'Me: Ugh, now I need some scrap to fix the systems.',
+      'Computer: 200t of scrap are needed',
+      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
+    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
 
@@ -2061,8 +2312,25 @@ const mainGameLoop = () => {
       paused = !paused;
     }
   } else escapeKeyUp = true;
+  cockpit.update(ship);
   // Block main game loop on pause
   if (paused) return;
+  tick++;
+  ship.update(enemies, planets, tick);
+  // Move the background based on the ship's speed
+  starField.dx = ship.speedX;
+  starField.dy = ship.speedY;
+  starField.update(tick);
+
+  planets.dx = ship.speedX;
+  planets.dy = ship.speedY;
+  planets.update(enemies, ship, tick);
+
+  enemies.forEach(e => {
+    e.dx = ship.speedX;
+    e.dy = ship.speedY;
+    e.update(enemies, planets);
+  });
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
     const [x, y] = randomPointOutsideView(canvas);
@@ -2081,22 +2349,11 @@ const mainGameLoop = () => {
       })
     );
   }
-  tick++;
-  ship.update(enemies, tick);
-  cockpit.update(ship);
-  // Move the background based on the ship's speed
-  starField.dx = ship.speedX;
-  starField.dy = ship.speedY;
-  starField.update(tick);
-  enemies.forEach(e => {
-    e.dx = ship.speedX;
-    e.dy = ship.speedY;
-    e.update(enemies);
-  });
   // Win Condition
-  if (ship.scrap === 200) {
+  if (ship.hasWarp === 200) {
     setTimeout(() => {
       enemies = [];
+      hasWon = true; // In case there is no local storage write it for this session
       gameOver = new GameOver(ship, true);
     }, 3000);
   }
@@ -2106,6 +2363,7 @@ const mainGameLoop = () => {
  */
 const mainGameRender = () => {
   starField.render();
+  planets.render();
   enemies.forEach(e => e.render());
   ship.render();
   cockpit.render();

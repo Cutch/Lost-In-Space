@@ -1,5 +1,5 @@
 import { GameObject, keyPressed } from 'kontra';
-import { distanceToTarget, text, distance, range } from './misc';
+import { distanceToTarget, text, magnitude, range } from './misc';
 import Bullet from './bullet';
 import { fireSound, engineSoundOff, engineSoundOn, crashSound } from './sound';
 // x,y point path of ship
@@ -37,18 +37,23 @@ const getPattern = () => {
   return patternCanvas;
 };
 class Ship extends GameObject.class {
-  maxShipSpeed = 4;
-  hasWarp = false;
+  acceleration = 0.05; // acceleration of the ship
+  rotationAcceleration = 0.05; // Rotation speed of the ship
+  maxSpeed = 4; // Max Speed of the ship
+  hasWarp = false; // Used for first play through for the win condition
   showExhaust = false; // Engine is firing
   bullets = []; // Active bullets
   fireRate = 20; // Bullet fire interval, every x ticks
-  lastFire = -20; // Initial value is negative of fire rate
+  lastFire = -99; // Initial value is negative of fire rate
+  secondaryWeapons = false;
+  secondaryFireRate = 15; // Bullet fire interval, every x ticks
+  lastSecondaryFire = -99;
   level = 1; // Ship's level
   engineLevel = 1; // Ship's level
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
   rotating = false;
-  constructor(cockpit) {
+  constructor(cockpit, hasWon) {
     super({
       width: 60,
       height: 60,
@@ -67,16 +72,26 @@ class Ship extends GameObject.class {
     // Ship texture
     _this.color = this.context.createPattern(getPattern(), 'repeat');
 
+    // Set a list of upgrades and what they do
     _this.upgrades = [
       [20, () => (_this.fireRate = 15), text.fireRateUpdated],
-      [40, () => ((_this.maxShipSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
+      [40, () => ((_this.maxSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
       [60, () => (_this.fireRate = 10), text.fireRateUpdated],
-      [80, () => ((_this.maxShipSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
-      [100, () => (_this.health = Math.min(100, _this.health + 50)), text.repair],
+      [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
-      [140, () => ((_this.maxShipSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
-      [200, () => (_this.hasWarp = true), text.warpDrive]
+      [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
+      [300, () => (_this.acceleration = 0.08), text.acceleration],
+      [350, () => (_this.fireRate = 4), text.fireRateUpdated],
+      [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
+      [450, () => (_this.fireRate = 3), text.fireRateUpdated],
+      [500, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
+      [550, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
+      [650, () => (_this.fireRate = 2), text.fireRateUpdated],
+      [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
     ];
+    // If already won dont add the win condition
+    if (!hasWon) _this.upgrades.push([200, () => (_this.hasWarp = true), text.warpDrive]);
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -87,6 +102,15 @@ class Ship extends GameObject.class {
           cockpit.addStatus(text);
         }
       });
+      /**
+       * Heal ship every 100 scrap
+       * Or every 50 after 600 scrap
+       */
+      if (_this.scrap % 100 === 0) {
+        _this.level++;
+        _this.health = Math.min(100, _this.health + 50);
+        cockpit.addStatus(text.repair);
+      }
     });
   }
   draw() {
@@ -102,7 +126,7 @@ class Ship extends GameObject.class {
       ctx.fillStyle = _this.fireGrad;
       ctx.beginPath();
       const r = Math.random();
-      const multiplier = Math.floor(Math.pow(_this.maxShipSpeed / 2, 2) * 2);
+      const multiplier = Math.floor(Math.pow(_this.maxSpeed / 2, 2) * 2);
       // 0-12 incl 12
       range(13).forEach(i =>
         ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
@@ -114,13 +138,13 @@ class Ship extends GameObject.class {
     super.render();
     this.bullets.forEach(b => b.render());
   }
-  update(enemies, tick) {
+  update(enemies, planets, tick) {
     const _this = this;
     // Update Bullets
     _this.bullets.forEach((b, i) => {
       // Check if bullets have gone too far or hit an enemy, remove if so
       if (b.tick < tick - 80 || b.hit) _this.bullets.splice(i, 1);
-      else b.update(enemies);
+      else b.update(enemies, planets);
     });
     // Check if it is a new day, day is 10 seconds
     _this.day = Math.floor(tick / 600);
@@ -137,42 +161,78 @@ class Ship extends GameObject.class {
     _this.showExhaust = keyPressed('w');
     if (_this.showExhaust && !prevShowExhaust) engineSoundOn(_this.engineLevel);
     else if (!_this.showExhaust && prevShowExhaust) engineSoundOff();
-    if (keyPressed('space') && tick - _this.lastFire >= _this.fireRate) {
-      fireSound();
-      _this.lastFire = tick;
-      _this.fire(tick);
+    if (keyPressed('space')) {
+      let fired = false;
+      if (tick - _this.lastFire >= _this.fireRate) {
+        fired = true;
+        _this.lastFire = tick;
+        _this.fire(tick);
+      }
+      if (_this.secondaryWeapons && tick - _this.lastSecondaryFire >= _this.secondaryFireRate) {
+        fired = true;
+        _this.lastSecondaryFire = tick;
+        _this.secondaryFire(tick);
+      }
+      if (fired) fireSound();
     }
     // Update the ship's speed on key press
     if (keyPressed('w')) {
-      _this.speedX += -Math.sin(_this.rotation) * 0.05;
-      _this.speedY += Math.cos(_this.rotation) * 0.05;
-      const speed = distance(_this.speedX, _this.speedY);
+      _this.speedX += -Math.sin(_this.rotation) * _this.acceleration;
+      _this.speedY += Math.cos(_this.rotation) * _this.acceleration;
+      const speed = magnitude(_this.speedX, _this.speedY);
       // Ensure ship does not go over current max speed
-      if (speed > _this.maxShipSpeed) {
-        _this.speedX *= _this.maxShipSpeed / speed;
-        _this.speedY *= _this.maxShipSpeed / speed;
+      if (speed > _this.maxSpeed) {
+        _this.speedX *= _this.maxSpeed / speed;
+        _this.speedY *= _this.maxSpeed / speed;
       }
     }
 
     // Rotate on key press
     // Do a half turn on first key press
-    const angle = 0.05 / (this.rotating ? 1 : 2);
+    const angle = _this.rotationAcceleration / (_this.rotating ? 1 : 2);
     if (keyPressed('a')) {
       _this.rotation = _this.rotation - angle;
-      this.rotating = true;
+      _this.rotating = true;
     } else if (keyPressed('d')) {
       _this.rotation = _this.rotation + angle;
-      this.rotating = true;
+      _this.rotating = true;
     } else this.rotating = false;
   }
   fire(tick) {
     const _this = this;
+    const sin = Math.sin(_this.rotation);
+    const cos = Math.cos(_this.rotation);
     _this.bullets.push(
       new Bullet({
-        dx: Math.sin(_this.rotation) * 10,
-        dy: -Math.cos(_this.rotation) * 10,
-        x: _this.x + Math.sin(_this.rotation) * 40,
-        y: _this.y - Math.cos(_this.rotation) * 40,
+        dx: sin * 10,
+        dy: -cos * 10,
+        x: _this.x + sin * 40,
+        y: _this.y - cos * 40,
+        rotation: _this.rotation,
+        tick
+      })
+    );
+  }
+  secondaryFire(tick) {
+    const _this = this;
+    const sin = Math.sin(_this.rotation);
+    const cos = Math.cos(_this.rotation);
+    _this.bullets.push(
+      new Bullet({
+        dx: sin * 15,
+        dy: -cos * 15,
+        x: _this.x + sin * -5 - cos * 30,
+        y: _this.y - cos * -5 - sin * 30,
+        rotation: _this.rotation,
+        tick
+      })
+    );
+    _this.bullets.push(
+      new Bullet({
+        dx: sin * 15,
+        dy: -cos * 15,
+        x: _this.x + sin * -5 + cos * 30,
+        y: _this.y - cos * -5 + sin * 30,
         rotation: _this.rotation,
         tick
       })
