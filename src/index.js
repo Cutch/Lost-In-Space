@@ -60,7 +60,7 @@ const initGame = () => {
     [
       "Me: Well let's get some Corg?",
       'Computer: Error: 404. Corg Not Found.',
-      'Me: What the heck is that then???',
+      'Me: What is that then???',
       'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
     ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
   else
@@ -92,6 +92,24 @@ const mainGameLoop = () => {
       paused = !paused;
     }
   } else escapeKeyUp = true;
+  // Check if an enemy should spawn
+  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
+    const [x, y] = randomPointOutsideView(canvas);
+    /**
+     * Determine the possibility for the health
+     * After day 3, chance goes up above health 1.
+     * Day 23 has the max chance of seeing health 3
+     */
+    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
+    enemies.push(
+      new Enemy({
+        x: x,
+        y: y,
+        ship,
+        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
+      })
+    );
+  }
   cockpit.update(ship);
   // Block main game loop on pause
   if (paused) return;
@@ -111,22 +129,17 @@ const mainGameLoop = () => {
     e.dy = ship.speedY;
     e.update(enemies, planets);
   });
-  // Check if an enemy should spawn
-  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
-    const [x, y] = randomPointOutsideView(canvas);
-    /**
-     * Determine the possibility for the health
-     * After day 3, chance goes up above health 1.
-     * Day 23 has the max chance of seeing health 3
-     */
-    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
-    enemies.push(
-      new Enemy({
-        x: x,
-        y: y,
-        ship,
-        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
-      })
+  if (enemies.length > 50) {
+    enemies.splice(
+      enemies.reduce(
+        (t, e, i) => {
+          const dist = e.distanceToShip();
+          if (t.max < dist) return { max: dist, i };
+          return t;
+        },
+        { max: 0, i: -1 }
+      ).i,
+      1
     );
   }
   // Win Condition
@@ -197,7 +210,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  // if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  if (ship.health <= 0) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();

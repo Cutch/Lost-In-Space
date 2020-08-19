@@ -1527,7 +1527,6 @@ class Bullet extends factory$3.class {
       .forEach(hitEnemy => {
         this.hit = true;
         hitEnemy.minusHealth();
-        if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
     /**
      * Check for bullet planet collision
@@ -1691,8 +1690,8 @@ class Ship extends factory$2.class {
       [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
       [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [200, () => (_this.acceleration = 0.08), text.acceleration],
       [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
-      [300, () => (_this.acceleration = 0.08), text.acceleration],
       [350, () => (_this.fireRate = 4), text.fireRateUpdated],
       [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
       [450, () => (_this.fireRate = 3), text.fireRateUpdated],
@@ -1702,7 +1701,9 @@ class Ship extends factory$2.class {
       [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
     ];
     // If already won dont add the win condition
-    if (!hasWon) _this.upgrades.push([200, () => (_this.hasWarp = true), text.warpDrive]);
+    if (!hasWon) {
+      _this.upgrades[_this.upgrades.findIndex(x => x[0] === 200)] = [200, () => (_this.hasWarp = true), text.warpDrive];
+    }
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -1715,9 +1716,9 @@ class Ship extends factory$2.class {
       });
       /**
        * Heal ship every 100 scrap
-       * Or every 50 after 600 scrap
+       * Or every 50 after 400 scrap
        */
-      if (_this.scrap % 100 === 0) {
+      if (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0)) {
         _this.level++;
         _this.health = Math.min(100, _this.health + 50);
         cockpit.addStatus(text.repair);
@@ -1926,6 +1927,7 @@ class Enemy extends factory$3.class {
     this.colorList = enemyPatterns;
     this.health++;
     this.minusHealth();
+    this.setToMaxSpeed();
   }
   // draw() {
   //   const { context } = this;
@@ -1935,6 +1937,10 @@ class Enemy extends factory$3.class {
   minusHealth() {
     this.health--;
     if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
+    else this.kill();
+  }
+  kill() {
+    this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: this }));
   }
   update(enemies, planets) {
     const _this = this;
@@ -1989,6 +1995,17 @@ class Enemy extends factory$3.class {
     _this.dx -= _this.speedX;
     _this.dy -= _this.speedY;
     super.update();
+  }
+  setToMaxSpeed() {
+    const _this = this;
+    const angle = angleToTarget(_this, _this.ship);
+    const day = _this.ship.day;
+    const maxSpeed = Math.min(day / 8, 5) + 5;
+    _this.speedX -= Math.sin(angle) * maxSpeed;
+    _this.speedY += Math.cos(angle) * maxSpeed;
+  }
+  distanceToShip() {
+    return distanceToTarget(this, this.ship);
   }
 }
 
@@ -2164,8 +2181,10 @@ class Planets extends factory$2.class {
     const quadHeight = height * 2;
     const quadX = Math.floor(x / quadWidth) + 1;
     const quadY = Math.floor(y / quadHeight) + 1;
+    const lastSeed = quadX * 10000 + quadY;
     this.quadX = quadX;
     this.quadY = quadY;
+    let justAppeared = false;
     if (quadX === 0 && quadY === 0) {
       // No planet in the first quadrant
       this.radius = 0;
@@ -2176,6 +2195,7 @@ class Planets extends factory$2.class {
       /**
        * Randomly place a planet in the center of a quadrant outside of the screen
        */
+      justAppeared = lastSeed != quadX * 10000 + quadY;
       const rand = seedRand(quadX * 10000 + quadY);
       this.radius = Math.floor(rand() * 60 + 40); // Range 40-100
       // Using radius * 4 as planet is 0,0 of planet is top left corner
@@ -2198,6 +2218,10 @@ class Planets extends factory$2.class {
           if (speed > 0) {
             ship.speedX = -speed * collision.x * 0.8;
             ship.speedY = -speed * collision.y * 0.8;
+          }
+          if (justAppeared) {
+            // Kill enemies that get caught in the spawn location
+            ship.kill();
           }
         } else if (dist < this.radius * 6) {
           /**
@@ -2265,7 +2289,7 @@ const initGame = () => {
     [
       "Me: Well let's get some Corg?",
       'Computer: Error: 404. Corg Not Found.',
-      'Me: What the heck is that then???',
+      'Me: What is that then???',
       'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
     ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
   else
@@ -2297,6 +2321,24 @@ const mainGameLoop = () => {
       paused = !paused;
     }
   } else escapeKeyUp = true;
+  // Check if an enemy should spawn
+  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
+    const [x, y] = randomPointOutsideView(canvas);
+    /**
+     * Determine the possibility for the health
+     * After day 3, chance goes up above health 1.
+     * Day 23 has the max chance of seeing health 3
+     */
+    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
+    enemies.push(
+      new Enemy({
+        x: x,
+        y: y,
+        ship,
+        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
+      })
+    );
+  }
   cockpit.update(ship);
   // Block main game loop on pause
   if (paused) return;
@@ -2316,22 +2358,17 @@ const mainGameLoop = () => {
     e.dy = ship.speedY;
     e.update(enemies, planets);
   });
-  // Check if an enemy should spawn
-  if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
-    const [x, y] = randomPointOutsideView(canvas);
-    /**
-     * Determine the possibility for the health
-     * After day 3, chance goes up above health 1.
-     * Day 23 has the max chance of seeing health 3
-     */
-    const healthChance = Math.max(Math.min((ship.day - 3) / 20, 1) * 2, 0) + 1;
-    enemies.push(
-      new Enemy({
-        x: x,
-        y: y,
-        ship,
-        health: Math.floor(Math.pow(Math.random(), 2) * healthChance + 1)
-      })
+  if (enemies.length > 50) {
+    enemies.splice(
+      enemies.reduce(
+        (t, e, i) => {
+          const dist = e.distanceToShip();
+          if (t.max < dist) return { max: dist, i };
+          return t;
+        },
+        { max: 0, i: -1 }
+      ).i,
+      1
     );
   }
   // Win Condition
@@ -2402,7 +2439,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  // if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  if (ship.health <= 0) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();

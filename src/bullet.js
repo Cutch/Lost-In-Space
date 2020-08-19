@@ -15,7 +15,6 @@ class Bullet extends Sprite.class {
       .forEach(hitEnemy => {
         this.hit = true;
         hitEnemy.minusHealth();
-        if (hitEnemy.health <= 0) this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: hitEnemy }));
       });
     /**
      * Check for bullet planet collision

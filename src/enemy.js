@@ -10,6 +10,7 @@ class Enemy extends Sprite.class {
     this.colorList = enemyPatterns;
     this.health++;
     this.minusHealth();
+    this.setToMaxSpeed();
   }
   // draw() {
   //   const { context } = this;
@@ -19,6 +20,10 @@ class Enemy extends Sprite.class {
   minusHealth() {
     this.health--;
     if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
+    else this.kill();
+  }
+  kill() {
+    this.context.canvas.dispatchEvent(new CustomEvent('eh', { detail: this }));
   }
   update(enemies, planets) {
     const _this = this;
@@ -73,6 +78,17 @@ class Enemy extends Sprite.class {
     _this.dx -= _this.speedX;
     _this.dy -= _this.speedY;
     super.update();
+  }
+  setToMaxSpeed() {
+    const _this = this;
+    const angle = angleToTarget(_this, _this.ship);
+    const day = _this.ship.day;
+    const maxSpeed = Math.min(day / 8, 5) + 5;
+    _this.speedX -= Math.sin(angle) * maxSpeed;
+    _this.speedY += Math.cos(angle) * maxSpeed;
+  }
+  distanceToShip() {
+    return distanceToTarget(this, this.ship);
   }
 }
 export default Enemy;

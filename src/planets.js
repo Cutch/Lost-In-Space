@@ -83,8 +83,10 @@ class Planets extends GameObject.class {
     const quadHeight = height * 2;
     const quadX = Math.floor(x / quadWidth) + 1;
     const quadY = Math.floor(y / quadHeight) + 1;
+    const lastSeed = quadX * 10000 + quadY;
     this.quadX = quadX;
     this.quadY = quadY;
+    let justAppeared = false;
     if (quadX === 0 && quadY === 0) {
       // No planet in the first quadrant
       this.radius = 0;
@@ -95,6 +97,7 @@ class Planets extends GameObject.class {
       /**
        * Randomly place a planet in the center of a quadrant outside of the screen
        */
+      justAppeared = lastSeed != quadX * 10000 + quadY;
       const rand = seedRand(quadX * 10000 + quadY);
       this.radius = Math.floor(rand() * 60 + 40); // Range 40-100
       // Using radius * 4 as planet is 0,0 of planet is top left corner
@@ -117,6 +120,10 @@ class Planets extends GameObject.class {
           if (speed > 0) {
             ship.speedX = -speed * collision.x * 0.8;
             ship.speedY = -speed * collision.y * 0.8;
+          }
+          if (justAppeared) {
+            // Kill enemies that get caught in the spawn location
+            ship.kill();
           }
         } else if (dist < this.radius * 6) {
           /**

@@ -80,8 +80,8 @@ class Ship extends GameObject.class {
       [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
       [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [200, () => (_this.acceleration = 0.08), text.acceleration],
       [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
-      [300, () => (_this.acceleration = 0.08), text.acceleration],
       [350, () => (_this.fireRate = 4), text.fireRateUpdated],
       [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
       [450, () => (_this.fireRate = 3), text.fireRateUpdated],
@@ -91,7 +91,9 @@ class Ship extends GameObject.class {
       [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
     ];
     // If already won dont add the win condition
-    if (!hasWon) _this.upgrades.push([200, () => (_this.hasWarp = true), text.warpDrive]);
+    if (!hasWon) {
+      _this.upgrades[_this.upgrades.findIndex(x => x[0] === 200)] = [200, () => (_this.hasWarp = true), text.warpDrive];
+    }
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -104,9 +106,9 @@ class Ship extends GameObject.class {
       });
       /**
        * Heal ship every 100 scrap
-       * Or every 50 after 600 scrap
+       * Or every 50 after 400 scrap
        */
-      if (_this.scrap % 100 === 0) {
+      if (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0)) {
         _this.level++;
         _this.health = Math.min(100, _this.health + 50);
         cockpit.addStatus(text.repair);
