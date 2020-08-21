@@ -36,7 +36,7 @@ if (AudioContext) {
     clearTimeout(timer);
     if (!engineSounds) {
       const filter = ctx.createBiquadFilter();
-      filter.type = 0;
+      // filter.type = 0;
       filter.Q.value = 20;
       engineSounds = [ctx.createOscillator(), ctx.createOscillator()];
       const [a, b] = engineSounds;

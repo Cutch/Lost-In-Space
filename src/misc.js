@@ -17,7 +17,6 @@ export const text = {
   secondaryFireRateUpdated: 'Secondary Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
   repair: 'Hull Repaired',
-  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...',
   secondaryWeapons: 'Secondary Weapons Online',
   acceleration: 'Acceleration Increased',
   rotationSpeed: 'Rotor Speed Increased'

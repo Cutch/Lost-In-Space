@@ -7,6 +7,7 @@ import GameOver from './gameOver';
 import textures from './textures';
 import { randomPointOutsideView } from './misc';
 import Planets from './planets';
+import { getStory } from './story';
 const { context, canvas } = init();
 textures(context);
 /**
@@ -42,7 +43,7 @@ let ship;
 let enemies;
 let tick;
 let paused;
-let hasWon = localStorage ? localStorage.getItem('lins_won') || false : false;
+let maxScrap = localStorage ? localStorage.getItem('lins25_score') || 0 : 0;
 /**
  * Initial values for the game start and setup
  */
@@ -51,30 +52,14 @@ const initGame = () => {
   gameOver = null;
   cockpit = new Cockpit();
   starField = new StarField();
-  ship = new Ship(cockpit, hasWon);
+  ship = new Ship(cockpit, maxScrap);
   paused = false;
   tick = 1;
   enemies = [];
   planets = new Planets();
-  if (hasWon)
-    [
-      "Me: Well let's get some Corg?",
-      'Computer: Error: 404. Corg Not Found.',
-      'Me: What is that then???',
-      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
-  else
-    [
-      'Me: Where am I?',
-      'Computer: Error: 404. Location Not Found.',
-      'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
-      "Me: This may be Corg space, I don't want to get assimil...assinated.",
-      'Me: Computer, System Status.',
-      'Computer: All systems have been destroyed.',
-      'Me: Ugh, now I need some scrap to fix the systems.',
-      'Computer: 200t of scrap are needed',
-      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  const chapter = getStory(maxScrap);
+  // gameOver = new GameOver(ship, false, 50);
+  chapter.initialText.forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
 
@@ -146,8 +131,8 @@ const mainGameLoop = () => {
   if (ship.hasWarp === 200) {
     setTimeout(() => {
       enemies = [];
-      hasWon = true; // In case there is no local storage write it for this session
-      gameOver = new GameOver(ship, true);
+      gameOver = new GameOver(ship, true, maxScrap);
+      maxScrap = Math.max(maxScrap, ship.scrap); // In case there is no local storage write it for this session
     }, 3000);
   }
 };
@@ -183,6 +168,7 @@ const loop = GameLoop({
   // create the main game loop
   update: () => {
     if (gameOver) {
+      cockpit.update(ship);
       gameOver.update();
       // Restart the game if enter is pressed
       if (keyPressed('enter')) initGame();
@@ -210,7 +196,8 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  if (ship.health <= 0) gameOver = new GameOver(ship, false, maxScrap);
+  maxScrap = Math.max(maxScrap, ship.scrap); // In case there is no local storage write it for this session
 });
 // Start the game loop
 loop.start();

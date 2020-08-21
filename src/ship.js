@@ -2,6 +2,7 @@ import { GameObject, keyPressed } from 'kontra';
 import { distanceToTarget, text, magnitude, range } from './misc';
 import Bullet from './bullet';
 import { fireSound, engineSoundOff, engineSoundOn, crashSound } from './sound';
+import { getStory } from './story';
 // x,y point path of ship
 const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 60, 45, 60, 60, 57, 60, 45, 40, 30, 37.5, 15];
 const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
@@ -53,7 +54,7 @@ class Ship extends GameObject.class {
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
   rotating = false;
-  constructor(cockpit, hasWon) {
+  constructor(cockpit, maxScrap) {
     super({
       width: 60,
       height: 60,
@@ -71,29 +72,40 @@ class Ship extends GameObject.class {
     _this.fireGrad.addColorStop(1, '#600');
     // Ship texture
     _this.color = this.context.createPattern(getPattern(), 'repeat');
+    const chapter = getStory(maxScrap);
 
     // Set a list of upgrades and what they do
     _this.upgrades = [
       [20, () => (_this.fireRate = 15), text.fireRateUpdated],
-      [40, () => ((_this.maxSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
+      [40, () => ((_this.maxSpeed = 5), _this.engineLevel++), text.maxSpeed],
       [60, () => (_this.fireRate = 10), text.fireRateUpdated],
-      [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
+      [80, () => ((_this.maxSpeed = 6), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
-      [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [140, () => ((_this.maxSpeed = 7), _this.engineLevel++), text.maxSpeed],
       [200, () => (_this.acceleration = 0.08), text.acceleration],
       [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
-      [350, () => (_this.fireRate = 4), text.fireRateUpdated],
-      [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
-      [450, () => (_this.fireRate = 3), text.fireRateUpdated],
-      [500, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
-      [550, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
-      [650, () => (_this.fireRate = 2), text.fireRateUpdated],
-      [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
+      [300, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
+      [350, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
+      [400, () => (_this.fireRate = 4), text.fireRateUpdated],
+      [450, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
+      [550, () => (_this.fireRate = 3), text.fireRateUpdated],
+      [600, () => (_this.acceleration = 0.1), text.acceleration],
+      [650, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated],
+      [750, () => (_this.fireRate = 2), text.fireRateUpdated],
+      [800, () => (_this.rotationAcceleration = 0.1), text.rotationSpeed],
+      [850, () => (_this.secondaryFireRate = 5), text.secondaryFireRateUpdated],
+      [950, () => (_this.secondaryFireRate = 4), text.secondaryFireRateUpdated]
     ];
     // If already won dont add the win condition
-    if (!hasWon) {
-      _this.upgrades[_this.upgrades.findIndex(x => x[0] === 200)] = [200, () => (_this.hasWarp = true), text.warpDrive];
+
+    if (chapter.scrap) {
+      const gameWinUpgrade = [chapter.scrap, () => (_this.hasWarp = true), chapter.gameWinStatus];
+      const i = _this.upgrades.findIndex(x => x[0] >= chapter.scrap);
+      if (i === -1) _this.upgrades.push(gameWinUpgrade);
+      if (_this.upgrades[i][0] == chapter.scrap) _this.upgrades[i] = gameWinUpgrade;
+      else _this.upgrades.splice(i, 0, gameWinUpgrade);
     }
+    console.log(this.upgrades);
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -108,7 +120,7 @@ class Ship extends GameObject.class {
        * Heal ship every 100 scrap
        * Or every 50 after 400 scrap
        */
-      if (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0)) {
+      if (!_this.hasWarp && (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0))) {
         _this.level++;
         _this.health = Math.min(100, _this.health + 50);
         cockpit.addStatus(text.repair);
