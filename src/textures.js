@@ -8,23 +8,47 @@ const getEnemyPattern = (color, seed) => {
   const patternContext = patternCanvas.getContext('2d');
 
   // Give the pattern a width and height of 50
-  patternCanvas.width = 40;
-  patternCanvas.height = 40;
+  patternCanvas.width = 30;
+  patternCanvas.height = 30;
 
   // Give the pattern a background color
   patternContext.fillStyle = color;
-  patternContext.fillRect(0, 0, 40, 40);
+  patternContext.fillRect(0, 0, 30, 30);
 
   const rand = seedRand(seed + 1);
-  for (let x = 0, y = 0; y < 40; ) {
+  for (let x = 0, y = 0; y < 30; ) {
     const w = Math.floor(rand() * 7 + 2);
     patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
     patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
     x += 1 + w;
-    if (x > 40) {
+    if (x > 30) {
       y += 5;
       x = 0;
     }
+  }
+  const redraw = patternContext.createPattern(patternCanvas, null);
+  patternCanvas.width = 40;
+  patternCanvas.height = 40;
+  patternContext.fillStyle = '#0000';
+  patternContext.fillRect(0, 0, 40, 40);
+
+  // patternContext.fillStyle = '#f00';
+  // patternContext.fillRect(0, 0, 20, 20);
+  // patternContext.fillStyle = '#fff';
+  // patternContext.fillRect(20, 20, 20, 20);
+  // patternContext.fillStyle = '#0f0';
+  // patternContext.fillRect(20, 0, 20, 20);
+  // patternContext.fillStyle = '#00f';
+  // patternContext.fillRect(0, 20, 20, 20);
+
+  patternContext.fillStyle = redraw;
+  for (let i = 0; i < 10; i++) {
+    patternContext.beginPath();
+    patternContext.rect(i, i / 2, 30, 30);
+    patternContext.strokeWidth = 1;
+    patternContext.strokeStyle = '#0008';
+    patternContext.fill();
+    patternContext.stroke();
   }
   return patternCanvas;
 };
