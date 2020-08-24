@@ -23,6 +23,7 @@ export const text = {
 };
 export const seedRand = function(s) {
   return () => {
+    if (s == 0) s++;
     s = Math.sin(s) * 10000;
     return s - Math.floor(s);
   };

@@ -130,8 +130,8 @@ class Planets extends GameObject.class {
            * If in sphere of influence apply gravity
            */
           const angle = angleToTarget(shipXY, planetXY);
-          ship.speedX += ((-Math.sin(angle) / 50) * dist) / 200;
-          ship.speedY += ((Math.cos(angle) / 50) * dist) / 200;
+          ship.speedX += ((-Math.sin(angle) / 50) * dist) / 150;
+          ship.speedY += ((Math.cos(angle) / 50) * dist) / 150;
         }
       });
     }
