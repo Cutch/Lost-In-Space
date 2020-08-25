@@ -1,8 +1,48 @@
 import { range, seedRand } from './misc';
+export let shipPattern;
 const enemyTypes = 15;
 export const enemyPatterns = [];
 const planetTypes = 50;
 export const planetPatterns = [];
+const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.lineTo(x3, y3);
+  ctx.fill();
+};
+const getShipPattern = () => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+  const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 59, 45, 59, 59, 57, 59, 45, 40, 30, 37.5, 15];
+
+  // Give the pattern a width and height of 50
+  patternContext.fillStyle = '#000F';
+  patternContext.fillRect(0, 0, 60, 60);
+
+  patternCanvas.width = 60;
+  patternCanvas.height = 60;
+
+  patternContext.beginPath();
+  patternContext.fillStyle = '#888';
+  for (let i = 0; i < shipPath.length; i += 2) patternContext.lineTo(shipPath[i], shipPath[i + 1]);
+  patternContext.fill();
+
+  patternContext.fillStyle = '#444';
+  triangle(patternContext, 40, 30, 50, 59, 80);
+  triangle(patternContext, 20, 30, 10, 59, -20);
+  patternContext.fillStyle = '#777';
+  triangle(patternContext, 30, 5, 20, 50, 40);
+  patternContext.fillStyle = '#666';
+  triangle(patternContext, 30, 5, 20, 40, 40);
+  patternContext.fillStyle = '#222';
+  triangle(patternContext, 30, 15, 25, 35, 35);
+  patternContext.fillStyle = '#AAA';
+  range(4).forEach(i => {
+    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 59, i * 10 + 20);
+  });
+  return patternCanvas;
+};
 const getEnemyPattern = (color, seed) => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
@@ -31,15 +71,6 @@ const getEnemyPattern = (color, seed) => {
   patternCanvas.height = 40;
   patternContext.fillStyle = '#0000';
   patternContext.fillRect(0, 0, 40, 40);
-
-  // patternContext.fillStyle = '#f00';
-  // patternContext.fillRect(0, 0, 20, 20);
-  // patternContext.fillStyle = '#fff';
-  // patternContext.fillRect(20, 20, 20, 20);
-  // patternContext.fillStyle = '#0f0';
-  // patternContext.fillRect(20, 0, 20, 20);
-  // patternContext.fillStyle = '#00f';
-  // patternContext.fillRect(0, 20, 20, 20);
 
   patternContext.fillStyle = redraw;
   for (let i = 0; i < 10; i++) {
@@ -79,6 +110,7 @@ const getPlanetPattern = seed => {
   return patternCanvas;
 };
 const init = context => {
+  shipPattern = context.createPattern(getShipPattern(), null);
   range(enemyTypes)
     .reduce((t, x) => [...t, ...['#080', '#00f', '#d00'].map(color => getEnemyPattern(color, x))], [])
     .map(x => context.createPattern(x, null))

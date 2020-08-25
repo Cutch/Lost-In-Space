@@ -8,21 +8,28 @@ const smallFont = `20px Arial`;
 const color = '#fff';
 const textAlign = 'center';
 const localStorage = window.localStorage;
-
+let maxScrap = localStorage ? localStorage.getItem('lins25_score') || 0 : 0;
+let level = localStorage ? localStorage.getItem('lins25_level') || 0 : 0;
+export const getLevel = () => level;
 class GameOver extends GameObject.class {
   gameWin = false;
-  constructor(ship, gameWin, maxScrap) {
+  constructor(ship, gameWin) {
     super();
     engineSoundOff();
     const _this = this;
-    const chapter = getStory(maxScrap);
+    const chapter = getStory();
     _this.background = new Sprite({ width: 650, height: 400, color: '#600A' });
     _this.winTexts = chapter.gameOverText.map(gg => new Text({ font: smallFont, color, text: gg, textAlign }));
     _this.gameOverText = new Text({ font, color, text: 'Game Over', textAlign });
     _this.highScoreText = new Text({ font, color, text: `Score: ${ship.scrap}`, textAlign });
     const maxScore = Math.max(maxScrap, ship.scrap);
+
+    maxScrap = maxScore; // In case there is no local storage write it for this session
+    if (gameWin) level++; // In case there is no local storage write it for this session
+
     if (localStorage) {
       localStorage.setItem('lins25_score', maxScore);
+      localStorage.setItem('lins25_level', level);
     }
     _this.maxScoreText = new Text({
       font: `18px Arial`,

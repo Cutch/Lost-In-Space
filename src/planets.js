@@ -12,66 +12,8 @@ class Planets extends GameObject.class {
     context.beginPath();
     context.arc(this.planetX, this.planetY, this.radius, 0, 2 * Math.PI);
     context.fill();
-    /**
-     * Testing code, adds quadrant lines
-     */
-    // const { width, height } = this.context.canvas;
-    // const x = (this.x || 0) - width / 2;
-    // const y = (this.y || 0) - height / 2;
-    // const quadWidth = width * 2; // Minimum * 2 so that it appears off screen
-    // const quadHeight = height * 2;
-    // const quadX = Math.floor(x / quadWidth) + 1;
-    // const quadY = Math.floor(y / quadHeight) + 1;
-
-    // context.strokeStyle = '#F00';
-    // context.lineWidth = 5;
-    // context.beginPath();
-    // context.moveTo(Math.abs(quadX - 1) * quadWidth, -100000);
-    // context.lineTo(Math.abs(quadX - 1) * quadWidth, 100000);
-    // context.stroke();
-    // context.strokeStyle = '#0F0';
-    // context.beginPath();
-    // context.moveTo(Math.abs(quadX) * quadWidth, -100000);
-    // context.lineTo(Math.abs(quadX) * quadWidth, 100000);
-    // context.stroke();
-
-    // context.strokeStyle = '#F00';
-    // context.beginPath();
-    // context.moveTo(-100000, Math.abs(quadY - 1) * quadHeight);
-    // context.lineTo(100000, Math.abs(quadY - 1) * quadHeight);
-    // context.stroke();
-    // context.strokeStyle = '#0F0';
-    // context.beginPath();
-    // context.moveTo(-100000, Math.abs(quadY) * quadHeight);
-    // context.lineTo(100000, Math.abs(quadY) * quadHeight);
-    // context.stroke();
-
-    // const minQuadX = Math.floor((0 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // const maxQuadX = Math.floor((1 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // const minQuadY = Math.floor((0 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // const maxQuadY = Math.floor((1 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // context.strokeStyle = '#00F';
-    // context.beginPath();
-    // context.moveTo(minQuadX, -100000);
-    // context.lineTo(minQuadX, 100000);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(maxQuadX, -100000);
-    // context.lineTo(maxQuadX, 100000);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(-100000, minQuadY);
-    // context.lineTo(100000, minQuadY);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(-100000, maxQuadY);
-    // context.lineTo(100000, maxQuadY);
-    // context.stroke();
   }
-  update(enemies, ship, tick) {
+  update(enemies, ship, cheats) {
     super.update();
     const { width, height } = this.context.canvas;
     const x = (this.x || 0) - width / 2;
@@ -90,9 +32,6 @@ class Planets extends GameObject.class {
     if (quadX === 0 && quadY === 0) {
       // No planet in the first quadrant
       this.radius = 0;
-      // this.planetX = 200;
-      // this.planetY = ship.y - this.y;
-      // this.radius = 1 * 60 + 40;
     } else {
       /**
        * Randomly place a planet in the center of a quadrant outside of the screen
@@ -105,7 +44,7 @@ class Planets extends GameObject.class {
       this.planetY = Math.floor((rand() * (quadHeight - this.radius * 4)) / 2 + quadHeight / 4 - quadY * quadHeight + this.radius);
     }
     if (this.radius > 0) {
-      [...enemies, ship].forEach(ship => {
+      [...enemies, ...(cheats.gravity.on ? [] : [ship])].forEach(ship => {
         const planetXY = { x: this.planetX, y: this.planetY };
         const shipXY = { x: ship.x - this.x, y: ship.y - this.y };
         const dist = distanceToTarget(shipXY, planetXY);

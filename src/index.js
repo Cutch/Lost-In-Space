@@ -5,10 +5,26 @@ import Ship from './ship';
 import Enemy from './enemy';
 import GameOver from './gameOver';
 import textures from './textures';
-import { randomPointOutsideView } from './misc';
+import { randomPointOutsideView, keyPressedOnce } from './misc';
 import Planets from './planets';
 import { getStory } from './story';
 const { context, canvas } = init();
+const cheats = {
+  death: { on: false, text: 'No Death' },
+  gravity: { on: false, text: 'No Gravity' }
+};
+// eslint-disable-next-line no-console
+console.log(
+  [
+    'Hello Cheater',
+    '-------------------------',
+    ...Object.keys(cheats).map(
+      (k, i) =>
+        // eslint-disable-next-line no-console
+        `Press ${i + 1} for ${cheats[k].text}`
+    )
+  ].join('\n')
+);
 textures(context);
 /**
  * Track the browser window and resize the canvas
@@ -29,7 +45,6 @@ let titleText = new Text({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
-const localStorage = window.localStorage;
 const pauseText = new Text({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
@@ -43,7 +58,6 @@ let ship;
 let enemies;
 let tick;
 let paused;
-let maxScrap = localStorage ? localStorage.getItem('lins25_score') || 0 : 0;
 /**
  * Initial values for the game start and setup
  */
@@ -52,31 +66,25 @@ const initGame = () => {
   gameOver = null;
   cockpit = new Cockpit();
   starField = new StarField();
-  ship = new Ship(cockpit, maxScrap);
+  ship = new Ship(cockpit);
   paused = false;
   tick = 1;
   enemies = [];
   planets = new Planets();
-  const chapter = getStory(maxScrap);
+  const chapter = getStory();
   // gameOver = new GameOver(ship, false, 50);
   chapter.initialText.forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
-
-let escapeKeyUp = true;
 /**
  * Update the main game loop
  */
+let gameEnding = false;
 const mainGameLoop = () => {
   /**
    * Pause functionality
    */
-  if (keyPressed('esc')) {
-    if (escapeKeyUp) {
-      escapeKeyUp = false;
-      paused = !paused;
-    }
-  } else escapeKeyUp = true;
+  if (keyPressedOnce('esc')) paused = !paused;
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
     const [x, y] = randomPointOutsideView(canvas);
@@ -107,7 +115,7 @@ const mainGameLoop = () => {
 
   planets.dx = ship.speedX;
   planets.dy = ship.speedY;
-  planets.update(enemies, ship, tick);
+  planets.update(enemies, ship, cheats);
 
   enemies.forEach(e => {
     e.dx = ship.speedX;
@@ -127,14 +135,23 @@ const mainGameLoop = () => {
       1
     );
   }
-  // Win Condition
-  if (ship.hasWarp === 200) {
+  // Win Condition, only when there is a scrap goal
+  if (ship.hasWarp && !gameEnding) {
+    gameEnding = true;
     setTimeout(() => {
       enemies = [];
-      gameOver = new GameOver(ship, true, maxScrap);
-      maxScrap = Math.max(maxScrap, ship.scrap); // In case there is no local storage write it for this session
+      gameEnding = false;
+      gameOver = new GameOver(ship, true);
     }, 3000);
   }
+};
+const cheatsUpdates = () => {
+  Object.keys(cheats).map((k, i) => {
+    if (keyPressedOnce((i + 1).toString())) {
+      cheats[k].on = !cheats[k].on;
+      cockpit.addStatus(cheats[k].text + (cheats[k].on ? ' On' : ' Off'), 2000);
+    }
+  });
 };
 /**
  * Render the main game loop
@@ -149,24 +166,20 @@ const mainGameRender = () => {
 /**
  * Render the start of the game loop
  */
-let keyUp = true;
 const gameStartLoop = () => {
   // Check for messages left in the queue and if there is none left start the game
   if (cockpit.queue.length === 0) gameStart = false;
   cockpit.setSkipHelper(gameStart);
-  if (keyPressed('space')) {
-    // Only move forward if this is the first update space was pressed
-    if (keyUp) {
-      keyUp = false; // Set that the key is pressed
-      cockpit.getNextStatus();
-    }
-  } else keyUp = true; // Set the key is up
+  if (keyPressedOnce('space')) {
+    cockpit.getNextStatus();
+  }
   cockpit.update(ship);
 };
 const loop = GameLoop({
   clearCanvas: false,
   // create the main game loop
   update: () => {
+    cheatsUpdates();
     if (gameOver) {
       cockpit.update(ship);
       gameOver.update();
@@ -196,8 +209,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  if (ship.health <= 0) gameOver = new GameOver(ship, false, maxScrap);
-  maxScrap = Math.max(maxScrap, ship.scrap); // In case there is no local storage write it for this session
+  if (ship.health <= 0 && !cheats.death.on) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();

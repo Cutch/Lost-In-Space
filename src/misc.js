@@ -1,3 +1,5 @@
+import { keyPressed } from 'kontra';
+
 export const distanceToTarget = (source, target) => Math.sqrt(Math.pow(source.x - target.x, 2) + Math.pow(source.y - target.y, 2));
 export const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
   x > x1 - width / 2 && x < x1 + width / 2 && y > y1 - height / 2 && y < y1 + height / 2;
@@ -5,13 +7,6 @@ export const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
 export const magnitude = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 export const angleToTarget = (source, target) => (Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2) % (Math.PI * 2);
 
-// export const normalize = vec => {
-//   const mag = magnitude(vec.x, vec.y);
-//   vec.x /= mag;
-//   vec.y /= mag;
-//   return vec;
-// };
-// export const dotProduct = (a, b) => a.x * b.x + a.y * b.y;
 export const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   secondaryFireRateUpdated: 'Secondary Fire Rate Upgrade',
@@ -28,7 +23,7 @@ export const seedRand = function(s) {
     return s - Math.floor(s);
   };
 };
-// Test [...Array(to).keys()] compatibility
+// Todo: Test [...Array(to).keys()] compatibility
 // eslint-disable-next-line prefer-spread
 export const range = to => Array.apply(null, Array(to)).map((x, i) => i);
 export const randomPointOutsideView = ({ width, height }) => {
@@ -44,10 +39,12 @@ export const randomPointOutsideView = ({ width, height }) => {
   spawn[1] = Math.floor(spawn[1] * height);
   return spawn;
 };
-const numToHex = function(rgb) {
-  const hex = Number(rgb).toString(16);
-  return hex.length < 2 ? '0' + hex : hex;
-};
-export const rgbToHex = function(r, g, b) {
-  return '#' + numToHex(r) + numToHex(g) + numToHex(b);
+const isPressed = {};
+export const keyPressedOnce = key => {
+  if (keyPressed(key)) {
+    const wasPressed = isPressed[key];
+    isPressed[key] = true;
+    if (!wasPressed) return true;
+  } else isPressed[key] = false;
+  return false;
 };

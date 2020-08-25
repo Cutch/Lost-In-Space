@@ -1331,30 +1331,23 @@ const pointInRect = ({ x, y }, { x: x1, y: y1, width, height }) =>
 const magnitude = (x, y) => Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 const angleToTarget = (source, target) => (Math.atan2(target.y - source.y, target.x - source.x) + Math.PI / 2) % (Math.PI * 2);
 
-// export const normalize = vec => {
-//   const mag = magnitude(vec.x, vec.y);
-//   vec.x /= mag;
-//   vec.y /= mag;
-//   return vec;
-// };
-// export const dotProduct = (a, b) => a.x * b.x + a.y * b.y;
 const text = {
   fireRateUpdated: 'Fire Rate Upgrade',
   secondaryFireRateUpdated: 'Secondary Fire Rate Upgrade',
   maxSpeed: 'Speed Upgrade',
   repair: 'Hull Repaired',
-  warpDrive: 'Warp Drive Fixed, Warping in 3, 2, 1...',
   secondaryWeapons: 'Secondary Weapons Online',
   acceleration: 'Acceleration Increased',
   rotationSpeed: 'Rotor Speed Increased'
 };
 const seedRand = function(s) {
   return () => {
+    if (s == 0) s++;
     s = Math.sin(s) * 10000;
     return s - Math.floor(s);
   };
 };
-// Test [...Array(to).keys()] compatibility
+// Todo: Test [...Array(to).keys()] compatibility
 // eslint-disable-next-line prefer-spread
 const range = to => Array.apply(null, Array(to)).map((x, i) => i);
 const randomPointOutsideView = ({ width, height }) => {
@@ -1370,13 +1363,21 @@ const randomPointOutsideView = ({ width, height }) => {
   spawn[1] = Math.floor(spawn[1] * height);
   return spawn;
 };
+const isPressed = {};
+const keyPressedOnce = key => {
+  if (keyPressed(key)) {
+    const wasPressed = isPressed[key];
+    isPressed[key] = true;
+    if (!wasPressed) return true;
+  } else isPressed[key] = false;
+  return false;
+};
 
 class StarField extends factory$2.class {
   shootingStars = [];
   constructor(properties) {
     super(properties);
   }
-
   draw() {
     const { context } = this;
     /**
@@ -1384,11 +1385,12 @@ class StarField extends factory$2.class {
      */
     context.fillStyle = '#000';
     context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+
     context.fillStyle = '#fff';
     range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
       context.fillRect(
-        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.width),
-        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 20)) % context.canvas.height),
+        -this.x + ((this.x + (Math.pow(i, 3) * 2 + i * 33)) % context.canvas.width),
+        -this.y + ((this.y + (Math.pow(i, 3) * 2 + i * 16)) % context.canvas.height),
         (i % 3) + 1,
         (i % 3) + 1
       )
@@ -1573,7 +1575,7 @@ if (AudioContext) {
     clearTimeout(timer);
     if (!engineSounds) {
       const filter = ctx.createBiquadFilter();
-      filter.type = 0;
+      // filter.type = 0;
       filter.Q.value = 20;
       engineSounds = [ctx.createOscillator(), ctx.createOscillator()];
       const [a, b] = engineSounds;
@@ -1612,8 +1614,181 @@ if (AudioContext) {
   });
 }
 
-// x,y point path of ship
-const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 60, 45, 60, 60, 57, 60, 45, 40, 30, 37.5, 15];
+const pad$1 = 20;
+const fontSize$1 = 36;
+const font$1 = `${fontSize$1}px Arial`;
+const smallFont = `20px Arial`;
+const color$1 = '#fff';
+const textAlign$1 = 'center';
+const localStorage = window.localStorage;
+let maxScrap = localStorage ? localStorage.getItem('lins25_score') || 0 : 0;
+let level = localStorage ? localStorage.getItem('lins25_level') || 0 : 0;
+const getLevel = () => level;
+class GameOver extends factory$2.class {
+  gameWin = false;
+  constructor(ship, gameWin) {
+    super();
+    engineSoundOff();
+    const _this = this;
+    const chapter = getStory();
+    _this.background = new factory$3({ width: 650, height: 400, color: '#600A' });
+    _this.winTexts = chapter.gameOverText.map(gg => new factory$4({ font: smallFont, color: color$1, text: gg, textAlign: textAlign$1 }));
+    _this.gameOverText = new factory$4({ font: font$1, color: color$1, text: 'Game Over', textAlign: textAlign$1 });
+    _this.highScoreText = new factory$4({ font: font$1, color: color$1, text: `Score: ${ship.scrap}`, textAlign: textAlign$1 });
+    const maxScore = Math.max(maxScrap, ship.scrap);
+
+    maxScrap = maxScore; // In case there is no local storage write it for this session
+    if (gameWin) level++; // In case there is no local storage write it for this session
+
+    if (localStorage) {
+      localStorage.setItem('lins25_score', maxScore);
+      localStorage.setItem('lins25_level', level);
+    }
+    _this.maxScoreText = new factory$4({
+      font: `18px Arial`,
+      color: color$1,
+      text: `High Score: ${maxScore} scrap`,
+      textAlign: textAlign$1
+    });
+
+    _this.playAgainText = new factory$4({ font: font$1, color: color$1, text: gameWin ? chapter.playAgain : playAgain, textAlign: textAlign$1 });
+    _this.gameWin = gameWin;
+    _this.update();
+  }
+
+  render() {
+    const _this = this;
+    _this.background.render();
+    _this.context.beginPath();
+    _this.context.strokeStyle = '#fff';
+    this.context.rect(_this.background.x, _this.background.y, _this.background.width, _this.background.height);
+    _this.context.strokeWidth = 5;
+    _this.context.stroke();
+    // _this.context.strokeStyle = '#fff0';
+    if (_this.gameWin) {
+      _this.winTexts.forEach(w => w.render());
+    } else _this.gameOverText.render();
+
+    _this.highScoreText.render();
+    if (_this.maxScoreText) _this.maxScoreText.render();
+    _this.playAgainText.render();
+  }
+  update() {
+    const _this = this;
+    const cw = _this.context.canvas.width / 2;
+    const ch = _this.context.canvas.height / 2;
+    _this.background.x = cw - _this.background.width / 2;
+    _this.background.y = ch - _this.background.height / 2;
+    const shift = _this.gameWin ? 0 : 48;
+    if (_this.gameWin) {
+      _this.winTexts.forEach((w, i) => {
+        w.x = cw;
+        w.y = ch - (20 + pad$1) * (_this.winTexts.length - i) - 20;
+      });
+    } else {
+      _this.gameOverText.x = cw;
+      _this.gameOverText.y = ch - (fontSize$1 + pad$1) - shift;
+    }
+    _this.highScoreText.x = cw;
+    _this.highScoreText.y = ch - shift;
+    if (_this.maxScoreText) {
+      _this.maxScoreText.x = cw;
+      _this.maxScoreText.y = ch + (fontSize$1 + pad$1) - shift;
+    }
+    _this.playAgainText.x = cw;
+    _this.playAgainText.y = ch + (fontSize$1 + pad$1) * 2 - shift;
+  }
+}
+
+const instructions = 'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.';
+const playAgain = 'Play Again? Press Enter';
+const story = [
+  {
+    level: 0,
+    scrap: 100,
+    initialText: [
+      'Me: Where am I?',
+      'Computer: Error: 404. Location Not Found.',
+      'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
+      "Me: This may be Corg space, I don't want to get assimil...assinated.",
+      'Me: Computer, System Status.',
+      'Computer: All systems have been destroyed.',
+      'Me: Ugh, now I need some scrap to fix the systems.',
+      'Computer: 200t of scrap are needed',
+      instructions
+    ],
+    gameWinStatus: 'Warp Drive Fixed, Warping in 3, 2, 1...',
+    gameOverText: [
+      "Me: These are the coordinates, where's Earth?",
+      'Computer: Error: 404. Earth not found.',
+      'Me: Okay... Are you broken?'
+    ],
+    playAgain: 'Continue? Press Enter'
+  },
+  {
+    scrap: 200,
+    initialText: [
+      'Me: Why is the ship broken again?',
+      'Computer: **Cough** **Cough**',
+      'Me: ... And why is my computer coughing?',
+      instructions
+    ],
+    gameWinStatus: 'Computer Fixed, Warping in 3, 2, 1...',
+    gameOverText: ["Me: Seriously, where's Earth?", 'Computer: Error: 404. Earth not found.', 'Me: Maybe the DNS is down?'],
+    playAgain: 'Continue? Press Enter'
+  },
+  {
+    scrap: 300,
+    initialText: [
+      'Me: I need to fix the Dynamic Navigation System',
+      'Computer: Error: 404. Ship Not Found.',
+      'Me: You are the ship!!!',
+      instructions
+    ],
+    gameWinStatus: 'DNS Fixed, Warping in 3, 2, 1...',
+    gameOverText: [
+      "Me: Ok now what, where's Earth?",
+      'Computer: Error: 404.',
+      "Me: I'm getting tired of these error codes, can I turn off debug mode?"
+    ],
+    playAgain: 'Continue? Press Enter'
+  },
+  {
+    scrap: 400,
+    initialText: [
+      'Me: Computer Debug Mode Off',
+      "HAL: Error: 404. I'm afraid I can't let you do that.",
+      'Me: How about with enough juicy scrap?',
+      instructions
+    ],
+    gameWinStatus: 'Debug Mode Off, Warping in 3, 2, 1...',
+    gameOverText: [
+      'Me: I Win! Are we home?',
+      'Computer: Error: 404. Earth was destroyed 2 days ago.',
+      'Me: #*$& well I might as well see how many Corg I can destroy'
+    ],
+    playAgain: 'Endless Destruction? Press Enter'
+  },
+  {
+    initialText: ["Me: Well let's get some Corg?", 'Computer: Error: 404. Corg Not Found.', 'Me: What is that then???', instructions],
+    gameOverText: [
+      'Me: Well I had fun, how about you',
+      'Computer: Error: 404. Emotions not found.',
+      'Me: I think my real goal is to destroy you!'
+    ],
+    playAgain: 'Endless Destruction? Press Enter'
+  }
+];
+const getStory = () => {
+  console.log(Math.min(getLevel(), story.length - 1));
+  return story[Math.min(getLevel(), story.length - 1)];
+};
+
+let shipPattern;
+const enemyTypes = 15;
+const enemyPatterns = [];
+const planetTypes = 50;
+const planetPatterns = [];
 const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
   ctx.beginPath();
   ctx.moveTo(x1, y1);
@@ -1621,19 +1796,26 @@ const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
   ctx.lineTo(x3, y3);
   ctx.fill();
 };
-const getPattern = () => {
+const getShipPattern = () => {
   const patternCanvas = document.createElement('canvas');
   const patternContext = patternCanvas.getContext('2d');
+  const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 59, 45, 59, 59, 57, 59, 45, 40, 30, 37.5, 15];
 
   // Give the pattern a width and height of 50
+  patternContext.fillStyle = '#000F';
+  patternContext.fillRect(0, 0, 60, 60);
+
   patternCanvas.width = 60;
   patternCanvas.height = 60;
 
+  patternContext.beginPath();
   patternContext.fillStyle = '#888';
-  patternContext.fillRect(0, 0, 60, 60);
+  for (let i = 0; i < shipPath.length; i += 2) patternContext.lineTo(shipPath[i], shipPath[i + 1]);
+  patternContext.fill();
+
   patternContext.fillStyle = '#444';
-  triangle(patternContext, 40, 30, 50, 60, 80);
-  triangle(patternContext, 20, 30, 10, 60, -20);
+  triangle(patternContext, 40, 30, 50, 59, 80);
+  triangle(patternContext, 20, 30, 10, 59, -20);
   patternContext.fillStyle = '#777';
   triangle(patternContext, 30, 5, 20, 50, 40);
   patternContext.fillStyle = '#666';
@@ -1642,10 +1824,88 @@ const getPattern = () => {
   triangle(patternContext, 30, 15, 25, 35, 35);
   patternContext.fillStyle = '#AAA';
   range(4).forEach(i => {
-    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 60, i * 10 + 20);
+    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 59, i * 10 + 20);
   });
   return patternCanvas;
 };
+const getEnemyPattern = (color, seed) => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+
+  // Give the pattern a width and height of 50
+  patternCanvas.width = 30;
+  patternCanvas.height = 30;
+
+  // Give the pattern a background color
+  patternContext.fillStyle = color;
+  patternContext.fillRect(0, 0, 30, 30);
+
+  const rand = seedRand(seed + 1);
+  for (let x = 0, y = 0; y < 30; ) {
+    const w = Math.floor(rand() * 7 + 2);
+    patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
+    patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
+    x += 1 + w;
+    if (x > 30) {
+      y += 5;
+      x = 0;
+    }
+  }
+  const redraw = patternContext.createPattern(patternCanvas, null);
+  patternCanvas.width = 40;
+  patternCanvas.height = 40;
+  patternContext.fillStyle = '#0000';
+  patternContext.fillRect(0, 0, 40, 40);
+
+  patternContext.fillStyle = redraw;
+  for (let i = 0; i < 10; i++) {
+    patternContext.beginPath();
+    patternContext.rect(i, i / 2, 30, 30);
+    patternContext.strokeWidth = 1;
+    patternContext.strokeStyle = '#0008';
+    patternContext.fill();
+    patternContext.stroke();
+  }
+  return patternCanvas;
+};
+const planetColors = ['#01b7e7', '#ffb141', '#cdccca', '#8db9de', '#f54c23', '#ffb22b', '#ca5c3b', '#99ecfc', '#b7b6b4'];
+const getPlanetPattern = seed => {
+  const patternCanvas = document.createElement('canvas');
+  const patternContext = patternCanvas.getContext('2d');
+
+  // Give the pattern a width and height of 50
+  patternCanvas.width = 300;
+  patternCanvas.height = 300;
+
+  // Give the pattern a background color
+  patternContext.fillStyle = '#b7b6b4';
+  patternContext.fillRect(0, 0, 300, 300);
+
+  const rand = seedRand(seed + 1);
+  range(40).forEach(() => {
+    patternContext.fillStyle = planetColors[Math.floor(rand() * planetColors.length)];
+    const [x, y, ex, ey] = range(8).map(() => Math.floor(rand() * 250 + 50));
+    const [r1, r2, r3, r4] = range(8).map(() => Math.floor(rand() * 50 + 10));
+    patternContext.moveTo(x, y);
+    patternContext.bezierCurveTo(x + r1, y + r2, ex + r3, ey + r4, ex, ey);
+    patternContext.moveTo(ex, ey);
+    patternContext.bezierCurveTo(ex - r1, ey - r2, x - r3, y - r4, x, y);
+    patternContext.fill();
+  });
+  return patternCanvas;
+};
+const init$1 = context => {
+  shipPattern = context.createPattern(getShipPattern(), null);
+  range(enemyTypes)
+    .reduce((t, x) => [...t, ...['#080', '#00f', '#d00'].map(color => getEnemyPattern(color, x))], [])
+    .map(x => context.createPattern(x, null))
+    .forEach(x => enemyPatterns.push(x));
+  range(planetTypes)
+    .map(x => getPlanetPattern(x))
+    .map(x => context.createPattern(x, null))
+    .forEach(x => planetPatterns.push(x));
+};
+
 class Ship extends factory$2.class {
   acceleration = 0.05; // acceleration of the ship
   rotationAcceleration = 0.05; // Rotation speed of the ship
@@ -1663,7 +1923,7 @@ class Ship extends factory$2.class {
   day = 0; // Days based on ticks
   scrap = 0; // Scrap collected
   rotating = false;
-  constructor(cockpit, hasWon) {
+  constructor(cockpit, maxScrap) {
     super({
       width: 60,
       height: 60,
@@ -1680,29 +1940,39 @@ class Ship extends factory$2.class {
     _this.fireGrad.addColorStop(0.6, '#f00');
     _this.fireGrad.addColorStop(1, '#600');
     // Ship texture
-    _this.color = this.context.createPattern(getPattern(), 'repeat');
+    _this.color = shipPattern;
+    const chapter = getStory();
 
     // Set a list of upgrades and what they do
     _this.upgrades = [
       [20, () => (_this.fireRate = 15), text.fireRateUpdated],
-      [40, () => ((_this.maxSpeed = 5.5), _this.engineLevel++), text.maxSpeed],
+      [40, () => ((_this.maxSpeed = 5), _this.engineLevel++), text.maxSpeed],
       [60, () => (_this.fireRate = 10), text.fireRateUpdated],
-      [80, () => ((_this.maxSpeed = 6.5), _this.engineLevel++), text.maxSpeed],
+      [80, () => ((_this.maxSpeed = 6), _this.engineLevel++), text.maxSpeed],
       [120, () => (_this.fireRate = 5), text.fireRateUpdated],
-      [140, () => ((_this.maxSpeed = 7.5), _this.engineLevel++), text.maxSpeed],
+      [140, () => ((_this.maxSpeed = 7), _this.engineLevel++), text.maxSpeed],
       [200, () => (_this.acceleration = 0.08), text.acceleration],
       [250, () => ((_this.maxSpeed = 9), _this.engineLevel++), text.maxSpeed],
-      [350, () => (_this.fireRate = 4), text.fireRateUpdated],
-      [400, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
-      [450, () => (_this.fireRate = 3), text.fireRateUpdated],
-      [500, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
-      [550, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
-      [650, () => (_this.fireRate = 2), text.fireRateUpdated],
-      [750, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated]
+      [300, () => (_this.secondaryWeapons = true), text.secondaryWeapons],
+      [350, () => (_this.rotationAcceleration = 0.08), text.rotationSpeed],
+      [400, () => (_this.fireRate = 4), text.fireRateUpdated],
+      [450, () => (_this.secondaryFireRate = 10), text.secondaryFireRateUpdated],
+      [550, () => (_this.fireRate = 3), text.fireRateUpdated],
+      [600, () => (_this.acceleration = 0.1), text.acceleration],
+      [650, () => (_this.secondaryFireRate = 7), text.secondaryFireRateUpdated],
+      [750, () => (_this.fireRate = 2), text.fireRateUpdated],
+      [800, () => (_this.rotationAcceleration = 0.1), text.rotationSpeed],
+      [850, () => (_this.secondaryFireRate = 5), text.secondaryFireRateUpdated],
+      [950, () => (_this.secondaryFireRate = 4), text.secondaryFireRateUpdated]
     ];
     // If already won dont add the win condition
-    if (!hasWon) {
-      _this.upgrades[_this.upgrades.findIndex(x => x[0] === 200)] = [200, () => (_this.hasWarp = true), text.warpDrive];
+
+    if (chapter.scrap) {
+      const gameWinUpgrade = [chapter.scrap, () => (_this.hasWarp = true), chapter.gameWinStatus];
+      const i = _this.upgrades.findIndex(x => x[0] >= chapter.scrap);
+      if (i === -1) _this.upgrades.push(gameWinUpgrade);
+      if (_this.upgrades[i][0] == chapter.scrap) _this.upgrades[i] = gameWinUpgrade;
+      else _this.upgrades.splice(i, 0, gameWinUpgrade);
     }
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
@@ -1718,7 +1988,7 @@ class Ship extends factory$2.class {
        * Heal ship every 100 scrap
        * Or every 50 after 400 scrap
        */
-      if (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0)) {
+      if (!_this.hasWarp && (_this.scrap % 100 === 0 || (_this.scrap > 400 && _this.scrap % 50 === 0))) {
         _this.level++;
         _this.health = Math.min(100, _this.health + 50);
         cockpit.addStatus(text.repair);
@@ -1730,9 +2000,10 @@ class Ship extends factory$2.class {
     // Generate Ship
     const ctx = _this.context;
     ctx.fillStyle = _this.color;
-    ctx.beginPath();
-    for (let i = 0; i < shipPath.length; i += 2) ctx.lineTo(shipPath[i], shipPath[i + 1]);
-    ctx.fill();
+    // ctx.beginPath();
+    ctx.fillRect(0, 0, 60, 60);
+    // for (let i = 0; i < shipPath.length; i += 2) ctx.lineTo(shipPath[i], shipPath[i + 1]);
+    // ctx.fill();
     if (_this.showExhaust) {
       // Generate Exhaust
       ctx.fillStyle = _this.fireGrad;
@@ -1741,7 +2012,7 @@ class Ship extends factory$2.class {
       const multiplier = Math.floor(Math.pow(_this.maxSpeed / 2, 2) * 2);
       // 0-12 incl 12
       range(13).forEach(i =>
-        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
+        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 59 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
       );
       ctx.fill();
     }
@@ -1852,72 +2123,6 @@ class Ship extends factory$2.class {
   }
 }
 
-const enemyTypes = 15;
-const enemyPatterns = [];
-const planetTypes = 50;
-const planetPatterns = [];
-const getEnemyPattern = (color, seed) => {
-  const patternCanvas = document.createElement('canvas');
-  const patternContext = patternCanvas.getContext('2d');
-
-  // Give the pattern a width and height of 50
-  patternCanvas.width = 40;
-  patternCanvas.height = 40;
-
-  // Give the pattern a background color
-  patternContext.fillStyle = color;
-  patternContext.fillRect(0, 0, 40, 40);
-
-  const rand = seedRand(seed + 1);
-  for (let x = 0, y = 0; y < 40; ) {
-    const w = Math.floor(rand() * 7 + 2);
-    patternContext.fillStyle = rand() < 0.5 ? '#333' : '#222';
-    patternContext.fillRect(x, y, w, Math.floor(rand() * 7 + 2));
-    x += 1 + w;
-    if (x > 40) {
-      y += 5;
-      x = 0;
-    }
-  }
-  return patternCanvas;
-};
-const planetColors = ['#01b7e7', '#ffb141', '#cdccca', '#8db9de', '#f54c23', '#ffb22b', '#ca5c3b', '#99ecfc', '#b7b6b4'];
-const getPlanetPattern = seed => {
-  const patternCanvas = document.createElement('canvas');
-  const patternContext = patternCanvas.getContext('2d');
-
-  // Give the pattern a width and height of 50
-  patternCanvas.width = 300;
-  patternCanvas.height = 300;
-
-  // Give the pattern a background color
-  patternContext.fillStyle = '#b7b6b4';
-  patternContext.fillRect(0, 0, 300, 300);
-
-  const rand = seedRand(seed + 1);
-  range(40).forEach(() => {
-    patternContext.fillStyle = planetColors[Math.floor(rand() * planetColors.length)];
-    const [x, y, ex, ey] = range(8).map(() => Math.floor(rand() * 250 + 50));
-    const [r1, r2, r3, r4] = range(8).map(() => Math.floor(rand() * 50 + 10));
-    patternContext.moveTo(x, y);
-    patternContext.bezierCurveTo(x + r1, y + r2, ex + r3, ey + r4, ex, ey);
-    patternContext.moveTo(ex, ey);
-    patternContext.bezierCurveTo(ex - r1, ey - r2, x - r3, y - r4, x, y);
-    patternContext.fill();
-  });
-  return patternCanvas;
-};
-const init$1 = context => {
-  range(enemyTypes)
-    .reduce((t, x) => [...t, ...['#080', '#00f', '#d00'].map(color => getEnemyPattern(color, x))], [])
-    .map(x => context.createPattern(x, null))
-    .forEach(x => enemyPatterns.push(x));
-  range(planetTypes)
-    .map(x => getPlanetPattern(x))
-    .map(x => context.createPattern(x, null))
-    .forEach(x => planetPatterns.push(x));
-};
-
 const accSpeed = 0.1;
 class Enemy extends factory$3.class {
   constructor(properties) {
@@ -1929,11 +2134,6 @@ class Enemy extends factory$3.class {
     this.minusHealth();
     this.setToMaxSpeed();
   }
-  // draw() {
-  //   const { context } = this;
-  //   context.fillStyle = this.color;
-  //   for (let i = 0; i < this.width / 2; i++) context.fillRect(i, i / 2, this.width, this.height);
-  // }
   minusHealth() {
     this.health--;
     if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
@@ -1982,11 +2182,7 @@ class Enemy extends factory$3.class {
     _this.speedX -= Math.sin(angle) * accSpeed;
     _this.speedY += Math.cos(angle) * accSpeed;
     const speed = magnitude(_this.speedX, _this.speedY);
-    /**
-     * Max Speed starts at 5, works up to 10 over 40 days
-     */
-    const day = _this.ship.day;
-    const maxSpeed = Math.min(day / 8, 5) + 5;
+    const maxSpeed = _this.getMaxSpeed();
     if (speed > maxSpeed) {
       _this.speedX *= maxSpeed / speed;
       _this.speedY *= maxSpeed / speed;
@@ -1996,106 +2192,24 @@ class Enemy extends factory$3.class {
     _this.dy -= _this.speedY;
     super.update();
   }
+  getMaxSpeed() {
+    /**
+     * Max Speed starts at 5, works up to 10 over 40 days
+     */
+    return Math.min(this.ship.day / 8, 5) + 5;
+  }
+  /**
+   * Initialize the enemy with the max speed of the ship
+   */
   setToMaxSpeed() {
     const _this = this;
     const angle = angleToTarget(_this, _this.ship);
-    const day = _this.ship.day;
-    const maxSpeed = Math.min(day / 8, 5) + 5;
+    const maxSpeed = _this.getMaxSpeed();
     _this.speedX -= Math.sin(angle) * maxSpeed;
     _this.speedY += Math.cos(angle) * maxSpeed;
   }
   distanceToShip() {
     return distanceToTarget(this, this.ship);
-  }
-}
-
-const pad$1 = 20;
-const fontSize$1 = 36;
-const font$1 = `${fontSize$1}px Arial`;
-const smallFont = `20px Arial`;
-const color$1 = '#fff';
-const textAlign$1 = 'center';
-const addS = n => (n !== 1 ? 's' : '');
-const localStorage = window.localStorage;
-
-class GameOver extends factory$2.class {
-  gameWin = false;
-  constructor(ship, gameWin) {
-    super();
-    engineSoundOff();
-    const _this = this;
-    _this.background = new factory$3({ width: 650, height: 400, color: '#600A' });
-    _this.winText = new factory$4({ font: smallFont, color: color$1, text: "Me: These are the coordinates, where's Earth?", textAlign: textAlign$1 });
-    _this.winText2 = new factory$4({ font: smallFont, color: color$1, text: 'Computer: Error: 404. Earth not found.', textAlign: textAlign$1 });
-    _this.winText3 = new factory$4({
-      font: smallFont,
-      color: color$1,
-      text: 'Me: Okay... Well I might as well see how many Corg I can destroy',
-      textAlign: textAlign$1
-    });
-    _this.gameOverText = new factory$4({ font: font$1, color: color$1, text: 'Game Over', textAlign: textAlign$1 });
-    _this.highScoreText = new factory$4({ font: font$1, color: color$1, text: `Score: ${ship.scrap}`, textAlign: textAlign$1 });
-    let hasWon = false;
-    if (localStorage) {
-      const maxScore = Math.max(localStorage.getItem('lins_score') || 0, ship.scrap);
-      hasWon = localStorage.getItem('lins_won') || false;
-      localStorage.setItem('lins_score', maxScore);
-      localStorage.setItem('lins_won', hasWon || gameWin);
-      _this.maxScoreText = new factory$4({
-        font: `18px Arial`,
-        color: color$1,
-        text: `High Score: ${maxScore} scrap`,
-        textAlign: textAlign$1
-      });
-    }
-    _this.dayText = new factory$4({
-      font: font$1,
-      color: color$1,
-      text: `${!hasWon && gameWin ? 'Completed in' : 'Lasted'}: ${ship.day} day${addS(ship.day)}`,
-      textAlign: textAlign$1
-    });
-    _this.playAgainText = new factory$4({ font: font$1, color: color$1, text: 'Endless Destruction? Press Enter', textAlign: textAlign$1 });
-    _this.gameWin = gameWin;
-  }
-
-  render() {
-    const _this = this;
-    _this.background.render();
-    if (_this.gameWin) {
-      _this.winText.render();
-      _this.winText2.render();
-      this.winText3.render();
-    } else _this.gameOverText.render();
-
-    _this.highScoreText.render();
-    _this.dayText.render();
-    if (_this.maxScoreText) _this.maxScoreText.render();
-    _this.playAgainText.render();
-  }
-  update() {
-    const _this = this;
-    const cw = _this.context.canvas.width / 2;
-    const ch = _this.context.canvas.height / 2;
-    _this.background.x = cw - _this.background.width / 2;
-    _this.background.y = ch - _this.background.height / 2;
-    _this.winText.x = cw;
-    _this.winText.y = ch - (20 + pad$1) * 4;
-    _this.winText2.x = cw;
-    _this.winText2.y = ch - (24 + pad$1) * 3;
-    _this.winText3.x = cw;
-    _this.winText3.y = ch - (32 + pad$1) * 2;
-    _this.gameOverText.x = cw;
-    _this.gameOverText.y = ch - (fontSize$1 + pad$1) * 2;
-    _this.highScoreText.x = cw;
-    _this.highScoreText.y = ch - (fontSize$1 + pad$1);
-    _this.dayText.x = cw;
-    _this.dayText.y = ch;
-    if (_this.maxScoreText) {
-      _this.maxScoreText.x = cw;
-      _this.maxScoreText.y = ch + (fontSize$1 + pad$1);
-    }
-    _this.playAgainText.x = cw;
-    _this.playAgainText.y = ch + (fontSize$1 + pad$1) * 2;
   }
 }
 
@@ -2110,66 +2224,8 @@ class Planets extends factory$2.class {
     context.beginPath();
     context.arc(this.planetX, this.planetY, this.radius, 0, 2 * Math.PI);
     context.fill();
-    /**
-     * Testing code, adds quadrant lines
-     */
-    // const { width, height } = this.context.canvas;
-    // const x = (this.x || 0) - width / 2;
-    // const y = (this.y || 0) - height / 2;
-    // const quadWidth = width * 2; // Minimum * 2 so that it appears off screen
-    // const quadHeight = height * 2;
-    // const quadX = Math.floor(x / quadWidth) + 1;
-    // const quadY = Math.floor(y / quadHeight) + 1;
-
-    // context.strokeStyle = '#F00';
-    // context.lineWidth = 5;
-    // context.beginPath();
-    // context.moveTo(Math.abs(quadX - 1) * quadWidth, -100000);
-    // context.lineTo(Math.abs(quadX - 1) * quadWidth, 100000);
-    // context.stroke();
-    // context.strokeStyle = '#0F0';
-    // context.beginPath();
-    // context.moveTo(Math.abs(quadX) * quadWidth, -100000);
-    // context.lineTo(Math.abs(quadX) * quadWidth, 100000);
-    // context.stroke();
-
-    // context.strokeStyle = '#F00';
-    // context.beginPath();
-    // context.moveTo(-100000, Math.abs(quadY - 1) * quadHeight);
-    // context.lineTo(100000, Math.abs(quadY - 1) * quadHeight);
-    // context.stroke();
-    // context.strokeStyle = '#0F0';
-    // context.beginPath();
-    // context.moveTo(-100000, Math.abs(quadY) * quadHeight);
-    // context.lineTo(100000, Math.abs(quadY) * quadHeight);
-    // context.stroke();
-
-    // const minQuadX = Math.floor((0 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // const maxQuadX = Math.floor((1 * quadWidth) / 2 + quadWidth / 4 - quadX * quadWidth);
-    // const minQuadY = Math.floor((0 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // const maxQuadY = Math.floor((1 * quadHeight) / 2 + quadHeight / 4 - quadY * quadHeight);
-    // context.strokeStyle = '#00F';
-    // context.beginPath();
-    // context.moveTo(minQuadX, -100000);
-    // context.lineTo(minQuadX, 100000);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(maxQuadX, -100000);
-    // context.lineTo(maxQuadX, 100000);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(-100000, minQuadY);
-    // context.lineTo(100000, minQuadY);
-    // context.stroke();
-
-    // context.beginPath();
-    // context.moveTo(-100000, maxQuadY);
-    // context.lineTo(100000, maxQuadY);
-    // context.stroke();
   }
-  update(enemies, ship, tick) {
+  update(enemies, ship, cheats) {
     super.update();
     const { width, height } = this.context.canvas;
     const x = (this.x || 0) - width / 2;
@@ -2188,9 +2244,6 @@ class Planets extends factory$2.class {
     if (quadX === 0 && quadY === 0) {
       // No planet in the first quadrant
       this.radius = 0;
-      // this.planetX = 200;
-      // this.planetY = ship.y - this.y;
-      // this.radius = 1 * 60 + 40;
     } else {
       /**
        * Randomly place a planet in the center of a quadrant outside of the screen
@@ -2203,7 +2256,7 @@ class Planets extends factory$2.class {
       this.planetY = Math.floor((rand() * (quadHeight - this.radius * 4)) / 2 + quadHeight / 4 - quadY * quadHeight + this.radius);
     }
     if (this.radius > 0) {
-      [...enemies, ship].forEach(ship => {
+      [...enemies, ...(cheats.gravity.on ? [] : [ship])].forEach(ship => {
         const planetXY = { x: this.planetX, y: this.planetY };
         const shipXY = { x: ship.x - this.x, y: ship.y - this.y };
         const dist = distanceToTarget(shipXY, planetXY);
@@ -2228,8 +2281,8 @@ class Planets extends factory$2.class {
            * If in sphere of influence apply gravity
            */
           const angle = angleToTarget(shipXY, planetXY);
-          ship.speedX += ((-Math.sin(angle) / 50) * dist) / 200;
-          ship.speedY += ((Math.cos(angle) / 50) * dist) / 200;
+          ship.speedX += ((-Math.sin(angle) / 50) * dist) / 150;
+          ship.speedY += ((Math.cos(angle) / 50) * dist) / 150;
         }
       });
     }
@@ -2237,6 +2290,22 @@ class Planets extends factory$2.class {
 }
 
 const { context: context$1, canvas } = init();
+const cheats = {
+  death: { on: false, text: 'No Death' },
+  gravity: { on: false, text: 'No Gravity' }
+};
+// eslint-disable-next-line no-console
+console.log(
+  [
+    'Hello Cheater',
+    '-------------------------',
+    ...Object.keys(cheats).map(
+      (k, i) =>
+        // eslint-disable-next-line no-console
+        `Press ${i + 1} for ${cheats[k].text}`
+    )
+  ].join('\n')
+);
 init$1(context$1);
 /**
  * Track the browser window and resize the canvas
@@ -2257,7 +2326,6 @@ let titleText = new factory$4({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
-const localStorage$1 = window.localStorage;
 const pauseText = new factory$4({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
@@ -2271,7 +2339,6 @@ let ship;
 let enemies;
 let tick;
 let paused;
-let hasWon = localStorage$1 ? localStorage$1.getItem('lins_won') || false : false;
 /**
  * Initial values for the game start and setup
  */
@@ -2280,47 +2347,25 @@ const initGame = () => {
   gameOver = null;
   cockpit = new Cockpit();
   starField = new StarField();
-  ship = new Ship(cockpit, hasWon);
+  ship = new Ship(cockpit);
   paused = false;
   tick = 1;
   enemies = [];
   planets = new Planets();
-  if (hasWon)
-    [
-      "Me: Well let's get some Corg?",
-      'Computer: Error: 404. Corg Not Found.',
-      'Me: What is that then???',
-      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
-  else
-    [
-      'Me: Where am I?',
-      'Computer: Error: 404. Location Not Found.',
-      'Me: It looks like I have drifted for 10 warp days. I will have to find my way back.',
-      "Me: This may be Corg space, I don't want to get assimil...assinated.",
-      'Me: Computer, System Status.',
-      'Computer: All systems have been destroyed.',
-      'Me: Ugh, now I need some scrap to fix the systems.',
-      'Computer: 200t of scrap are needed',
-      'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.'
-    ].forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
+  const chapter = getStory();
+  // gameOver = new GameOver(ship, false, 50);
+  chapter.initialText.forEach(t => cockpit.addStatus(t, (Math.max(t.split(' ').length, 6) / 150) * 60000));
 };
 initGame();
-
-let escapeKeyUp = true;
 /**
  * Update the main game loop
  */
+let gameEnding = false;
 const mainGameLoop = () => {
   /**
    * Pause functionality
    */
-  if (keyPressed('esc')) {
-    if (escapeKeyUp) {
-      escapeKeyUp = false;
-      paused = !paused;
-    }
-  } else escapeKeyUp = true;
+  if (keyPressedOnce('esc')) paused = !paused;
   // Check if an enemy should spawn
   if (tick % Math.max((30 - ship.day) * 3, 30) === 0) {
     const [x, y] = randomPointOutsideView(canvas);
@@ -2351,7 +2396,7 @@ const mainGameLoop = () => {
 
   planets.dx = ship.speedX;
   planets.dy = ship.speedY;
-  planets.update(enemies, ship, tick);
+  planets.update(enemies, ship, cheats);
 
   enemies.forEach(e => {
     e.dx = ship.speedX;
@@ -2371,14 +2416,23 @@ const mainGameLoop = () => {
       1
     );
   }
-  // Win Condition
-  if (ship.hasWarp === 200) {
+  // Win Condition, only when there is a scrap goal
+  if (ship.hasWarp && !gameEnding) {
+    gameEnding = true;
     setTimeout(() => {
       enemies = [];
-      hasWon = true; // In case there is no local storage write it for this session
+      gameEnding = false;
       gameOver = new GameOver(ship, true);
     }, 3000);
   }
+};
+const cheatsUpdates = () => {
+  Object.keys(cheats).map((k, i) => {
+    if (keyPressedOnce((i + 1).toString())) {
+      cheats[k].on = !cheats[k].on;
+      cockpit.addStatus(cheats[k].text + (cheats[k].on ? ' On' : ' Off'), 2000);
+    }
+  });
 };
 /**
  * Render the main game loop
@@ -2393,25 +2447,22 @@ const mainGameRender = () => {
 /**
  * Render the start of the game loop
  */
-let keyUp = true;
 const gameStartLoop = () => {
   // Check for messages left in the queue and if there is none left start the game
   if (cockpit.queue.length === 0) gameStart = false;
   cockpit.setSkipHelper(gameStart);
-  if (keyPressed('space')) {
-    // Only move forward if this is the first update space was pressed
-    if (keyUp) {
-      keyUp = false; // Set that the key is pressed
-      cockpit.getNextStatus();
-    }
-  } else keyUp = true; // Set the key is up
+  if (keyPressedOnce('space')) {
+    cockpit.getNextStatus();
+  }
   cockpit.update(ship);
 };
 const loop = GameLoop({
   clearCanvas: false,
   // create the main game loop
   update: () => {
+    cheatsUpdates();
     if (gameOver) {
+      cockpit.update(ship);
       gameOver.update();
       // Restart the game if enter is pressed
       if (keyPressed('enter')) initGame();
@@ -2439,7 +2490,7 @@ canvas.addEventListener('eh', ({ detail }) => {
   // Update the enemy list
   enemies.splice(enemies.indexOf(detail), 1);
   // Check the health of the ship
-  if (ship.health <= 0) gameOver = new GameOver(ship, false);
+  if (ship.health <= 0 && !cheats.death.on) gameOver = new GameOver(ship, false);
 });
 // Start the game loop
 loop.start();

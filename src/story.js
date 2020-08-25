@@ -1,7 +1,10 @@
+import { getLevel } from './gameOver';
+
 const instructions = 'Computer: Use my WASD keys to fly and The Bar to shoot. ESC to stop time.';
 export const playAgain = 'Play Again? Press Enter';
 export const story = [
   {
+    level: 0,
     scrap: 100,
     initialText: [
       'Me: Where am I?',
@@ -64,16 +67,19 @@ export const story = [
       'Computer: Error: 404. Earth was destroyed 2 days ago.',
       'Me: #*$& well I might as well see how many Corg I can destroy'
     ],
-    playAgain: 'Continue? Press Enter'
+    playAgain: 'Endless Destruction? Press Enter'
   },
   {
-    endless: true,
     initialText: ["Me: Well let's get some Corg?", 'Computer: Error: 404. Corg Not Found.', 'Me: What is that then???', instructions],
-    gameOverText: ['Me: Well I had fun, how about you', 'Computer: Error: 404. Emotions not found.'],
+    gameOverText: [
+      'Me: Well I had fun, how about you',
+      'Computer: Error: 404. Emotions not found.',
+      'Me: I think my real goal is to destroy you!'
+    ],
     playAgain: 'Endless Destruction? Press Enter'
   }
 ];
-export const getStory = scrap => {
-  const chapter = story.findIndex(s => s.scrap && s.scrap > scrap);
-  return story[chapter === -1 ? story.length - 1 : chapter];
+export const getStory = () => {
+  console.log(Math.min(getLevel(), story.length - 1));
+  return story[Math.min(getLevel(), story.length - 1)];
 };

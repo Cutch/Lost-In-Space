@@ -1,5 +1,5 @@
 import { Sprite } from 'kontra';
-import { distanceToTarget, angleToTarget, magnitude, range, seedRand } from './misc';
+import { distanceToTarget, angleToTarget, magnitude } from './misc';
 import { enemyPatterns } from './textures';
 const accSpeed = 0.1;
 class Enemy extends Sprite.class {
@@ -12,11 +12,6 @@ class Enemy extends Sprite.class {
     this.minusHealth();
     this.setToMaxSpeed();
   }
-  // draw() {
-  //   const { context } = this;
-  //   context.fillStyle = this.color;
-  //   for (let i = 0; i < this.width / 2; i++) context.fillRect(i, i / 2, this.width, this.height);
-  // }
   minusHealth() {
     this.health--;
     if (this.health > 0) this.color = this.colorList[this.health - 1 + this.type];
@@ -65,11 +60,7 @@ class Enemy extends Sprite.class {
     _this.speedX -= Math.sin(angle) * accSpeed;
     _this.speedY += Math.cos(angle) * accSpeed;
     const speed = magnitude(_this.speedX, _this.speedY);
-    /**
-     * Max Speed starts at 5, works up to 10 over 40 days
-     */
-    const day = _this.ship.day;
-    const maxSpeed = Math.min(day / 8, 5) + 5;
+    const maxSpeed = _this.getMaxSpeed();
     if (speed > maxSpeed) {
       _this.speedX *= maxSpeed / speed;
       _this.speedY *= maxSpeed / speed;
@@ -79,11 +70,19 @@ class Enemy extends Sprite.class {
     _this.dy -= _this.speedY;
     super.update();
   }
+  getMaxSpeed() {
+    /**
+     * Max Speed starts at 5, works up to 10 over 40 days
+     */
+    return Math.min(this.ship.day / 8, 5) + 5;
+  }
+  /**
+   * Initialize the enemy with the max speed of the ship
+   */
   setToMaxSpeed() {
     const _this = this;
     const angle = angleToTarget(_this, _this.ship);
-    const day = _this.ship.day;
-    const maxSpeed = Math.min(day / 8, 5) + 5;
+    const maxSpeed = _this.getMaxSpeed();
     _this.speedX -= Math.sin(angle) * maxSpeed;
     _this.speedY += Math.cos(angle) * maxSpeed;
   }

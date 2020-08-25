@@ -3,40 +3,8 @@ import { distanceToTarget, text, magnitude, range } from './misc';
 import Bullet from './bullet';
 import { fireSound, engineSoundOff, engineSoundOn, crashSound } from './sound';
 import { getStory } from './story';
-// x,y point path of ship
-const shipPath = [30, 0, 22.5, 15, 20, 30, 0, 45, 0, 57, 15, 60, 45, 60, 60, 57, 60, 45, 40, 30, 37.5, 15];
-const triangle = (ctx, x1, y1, x2, y2, x3, y3 = y2) => {
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.lineTo(x3, y3);
-  ctx.fill();
-};
-const getPattern = () => {
-  const patternCanvas = document.createElement('canvas');
-  const patternContext = patternCanvas.getContext('2d');
+import { shipPattern } from './textures';
 
-  // Give the pattern a width and height of 50
-  patternCanvas.width = 60;
-  patternCanvas.height = 60;
-
-  patternContext.fillStyle = '#888';
-  patternContext.fillRect(0, 0, 60, 60);
-  patternContext.fillStyle = '#444';
-  triangle(patternContext, 40, 30, 50, 60, 80);
-  triangle(patternContext, 20, 30, 10, 60, -20);
-  patternContext.fillStyle = '#777';
-  triangle(patternContext, 30, 5, 20, 50, 40);
-  patternContext.fillStyle = '#666';
-  triangle(patternContext, 30, 5, 20, 40, 40);
-  patternContext.fillStyle = '#222';
-  triangle(patternContext, 30, 15, 25, 35, 35);
-  patternContext.fillStyle = '#AAA';
-  range(4).forEach(i => {
-    triangle(patternContext, i * 10 + 15, 50, i * 10 + 10, 60, i * 10 + 20);
-  });
-  return patternCanvas;
-};
 class Ship extends GameObject.class {
   acceleration = 0.05; // acceleration of the ship
   rotationAcceleration = 0.05; // Rotation speed of the ship
@@ -71,7 +39,7 @@ class Ship extends GameObject.class {
     _this.fireGrad.addColorStop(0.6, '#f00');
     _this.fireGrad.addColorStop(1, '#600');
     // Ship texture
-    _this.color = this.context.createPattern(getPattern(), 'repeat');
+    _this.color = shipPattern;
     const chapter = getStory(maxScrap);
 
     // Set a list of upgrades and what they do
@@ -105,7 +73,6 @@ class Ship extends GameObject.class {
       if (_this.upgrades[i][0] == chapter.scrap) _this.upgrades[i] = gameWinUpgrade;
       else _this.upgrades.splice(i, 0, gameWinUpgrade);
     }
-    console.log(this.upgrades);
     // Listen for enemies hit, by ship or bullets
     ctx.canvas.addEventListener('eh', () => {
       _this.scrap++;
@@ -132,9 +99,10 @@ class Ship extends GameObject.class {
     // Generate Ship
     const ctx = _this.context;
     ctx.fillStyle = _this.color;
-    ctx.beginPath();
-    for (let i = 0; i < shipPath.length; i += 2) ctx.lineTo(shipPath[i], shipPath[i + 1]);
-    ctx.fill();
+    // ctx.beginPath();
+    ctx.fillRect(0, 0, 60, 60);
+    // for (let i = 0; i < shipPath.length; i += 2) ctx.lineTo(shipPath[i], shipPath[i + 1]);
+    // ctx.fill();
     if (_this.showExhaust) {
       // Generate Exhaust
       ctx.fillStyle = _this.fireGrad;
@@ -143,7 +111,7 @@ class Ship extends GameObject.class {
       const multiplier = Math.floor(Math.pow(_this.maxSpeed / 2, 2) * 2);
       // 0-12 incl 12
       range(13).forEach(i =>
-        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 60 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
+        ctx.lineTo(15 + (_this.width / 2 / 12) * i, 59 + (i % 2) * (multiplier * 2 - r * multiplier * Math.sqrt(Math.abs(i / 2 - 3))))
       );
       ctx.fill();
     }

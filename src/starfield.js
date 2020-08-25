@@ -1,11 +1,10 @@
 import { GameObject, Sprite } from 'kontra';
-import { range, randomPointOutsideView, angleToTarget, seedRand } from './misc';
+import { range, randomPointOutsideView, angleToTarget } from './misc';
 class StarField extends GameObject.class {
   shootingStars = [];
   constructor(properties) {
     super(properties);
   }
-
   draw() {
     const { context } = this;
     /**
@@ -13,6 +12,7 @@ class StarField extends GameObject.class {
      */
     context.fillStyle = '#000';
     context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+
     context.fillStyle = '#fff';
     range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
       context.fillRect(
