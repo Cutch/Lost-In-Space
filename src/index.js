@@ -138,11 +138,13 @@ const mainGameLoop = () => {
   // Win Condition, only when there is a scrap goal
   if (ship.hasWarp && !gameEnding) {
     gameEnding = true;
+    starField.setClearBackground(false);
     setTimeout(() => {
       enemies = [];
+      starField.setClearBackground(true);
       gameEnding = false;
-      gameOver = new GameOver(ship, true);
-    }, 3000);
+      if (!gameOver) gameOver = new GameOver(ship, true);
+    }, 5000);
   }
 };
 const cheatsUpdates = () => {

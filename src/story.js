@@ -17,7 +17,7 @@ export const story = [
       'Computer: 200t of scrap are needed',
       instructions
     ],
-    gameWinStatus: 'Warp Drive Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'Warp Drive Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       "Me: These are the coordinates, where's Earth?",
       'Computer: Error: 404. Earth not found.',
@@ -33,7 +33,7 @@ export const story = [
       'Me: ... And why is my computer coughing?',
       instructions
     ],
-    gameWinStatus: 'Computer Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'Computer Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: ["Me: Seriously, where's Earth?", 'Computer: Error: 404. Earth not found.', 'Me: Maybe the DNS is down?'],
     playAgain: 'Continue? Press Enter'
   },
@@ -45,7 +45,7 @@ export const story = [
       'Me: You are the ship!!!',
       instructions
     ],
-    gameWinStatus: 'DNS Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'DNS Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       "Me: Ok now what, where's Earth?",
       'Computer: Error: 404.',
@@ -61,7 +61,7 @@ export const story = [
       'Me: How about with enough juicy scrap?',
       instructions
     ],
-    gameWinStatus: 'Debug Mode Off, Warping in 3, 2, 1...',
+    gameWinStatus: 'Debug Mode Off, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       'Me: I Win! Are we home?',
       'Computer: Error: 404. Earth was destroyed 2 days ago.',
@@ -80,6 +80,5 @@ export const story = [
   }
 ];
 export const getStory = () => {
-  console.log(Math.min(getLevel(), story.length - 1));
   return story[Math.min(getLevel(), story.length - 1)];
 };

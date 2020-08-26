@@ -1375,16 +1375,22 @@ const keyPressedOnce = key => {
 
 class StarField extends factory$2.class {
   shootingStars = [];
+  clearBackground = true;
   constructor(properties) {
     super(properties);
+  }
+  setClearBackground(on) {
+    this.clearBackground = on;
   }
   draw() {
     const { context } = this;
     /**
      * Draw the star field
      */
-    context.fillStyle = '#000';
-    context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    if (this.clearBackground) {
+      context.fillStyle = '#000';
+      context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    }
 
     context.fillStyle = '#fff';
     range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
@@ -1717,7 +1723,7 @@ const story = [
       'Computer: 200t of scrap are needed',
       instructions
     ],
-    gameWinStatus: 'Warp Drive Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'Warp Drive Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       "Me: These are the coordinates, where's Earth?",
       'Computer: Error: 404. Earth not found.',
@@ -1733,7 +1739,7 @@ const story = [
       'Me: ... And why is my computer coughing?',
       instructions
     ],
-    gameWinStatus: 'Computer Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'Computer Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: ["Me: Seriously, where's Earth?", 'Computer: Error: 404. Earth not found.', 'Me: Maybe the DNS is down?'],
     playAgain: 'Continue? Press Enter'
   },
@@ -1745,7 +1751,7 @@ const story = [
       'Me: You are the ship!!!',
       instructions
     ],
-    gameWinStatus: 'DNS Fixed, Warping in 3, 2, 1...',
+    gameWinStatus: 'DNS Fixed, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       "Me: Ok now what, where's Earth?",
       'Computer: Error: 404.',
@@ -1761,7 +1767,7 @@ const story = [
       'Me: How about with enough juicy scrap?',
       instructions
     ],
-    gameWinStatus: 'Debug Mode Off, Warping in 3, 2, 1...',
+    gameWinStatus: 'Debug Mode Off, Warping in 5, 4, 3, 2, 1...',
     gameOverText: [
       'Me: I Win! Are we home?',
       'Computer: Error: 404. Earth was destroyed 2 days ago.',
@@ -1780,7 +1786,6 @@ const story = [
   }
 ];
 const getStory = () => {
-  console.log(Math.min(getLevel(), story.length - 1));
   return story[Math.min(getLevel(), story.length - 1)];
 };
 
@@ -2419,11 +2424,13 @@ const mainGameLoop = () => {
   // Win Condition, only when there is a scrap goal
   if (ship.hasWarp && !gameEnding) {
     gameEnding = true;
+    starField.setClearBackground(false);
     setTimeout(() => {
       enemies = [];
+      starField.setClearBackground(true);
       gameEnding = false;
-      gameOver = new GameOver(ship, true);
-    }, 3000);
+      if (!gameOver) gameOver = new GameOver(ship, true);
+    }, 5000);
   }
 };
 const cheatsUpdates = () => {

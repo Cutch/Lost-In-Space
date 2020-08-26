@@ -2,16 +2,22 @@ import { GameObject, Sprite } from 'kontra';
 import { range, randomPointOutsideView, angleToTarget } from './misc';
 class StarField extends GameObject.class {
   shootingStars = [];
+  clearBackground = true;
   constructor(properties) {
     super(properties);
+  }
+  setClearBackground(on) {
+    this.clearBackground = on;
   }
   draw() {
     const { context } = this;
     /**
      * Draw the star field
      */
-    context.fillStyle = '#000';
-    context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    if (this.clearBackground) {
+      context.fillStyle = '#000';
+      context.fillRect(-this.x, -this.y, context.canvas.width, context.canvas.height);
+    }
 
     context.fillStyle = '#fff';
     range(Math.floor(context.canvas.width * context.canvas.height * 0.0001)).forEach(i =>
