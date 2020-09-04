@@ -2331,6 +2331,14 @@ let titleText = new factory$4({
   x: canvas.width / 2,
   y: canvas.height / 4
 });
+let titleText2 = new factory$4({
+  color: '#600D',
+  font: `24px Arial`,
+  textAlign: 'center',
+  text: 'Endless Destruction',
+  x: canvas.width / 2,
+  y: canvas.height / 4 + 90
+});
 const pauseText = new factory$4({ font: '36px Arial', color: '#fff', text: 'Paused', textAlign: 'center' });
 /**
  * Set variables used in the loops
@@ -2483,6 +2491,10 @@ const loop = GameLoop({
       titleText.x = canvas.width / 2;
       titleText.y = canvas.height / 4;
     }
+    if (titleText2) {
+      titleText2.x = canvas.width / 2;
+      titleText2.y = canvas.height / 4 + 90;
+    }
   },
   render: () => {
     mainGameRender();
@@ -2490,6 +2502,7 @@ const loop = GameLoop({
     else if (gameOver) gameOver.render();
     else if (gameStart) gameStartLoop();
     if (titleText) titleText.render();
+    if (titleText2) titleText2.render();
   }
 });
 // Listen for enemy hits
@@ -2501,4 +2514,7 @@ canvas.addEventListener('eh', ({ detail }) => {
 });
 // Start the game loop
 loop.start();
-setTimeout(() => (titleText = null), 6000);
+setTimeout(() => {
+  titleText = null;
+  titleText2 = null;
+}, 6000);
